@@ -17,8 +17,8 @@
 <script>
 (function(){
   const c=window.LAOMARKET_CONFIG||{};
-  if(!c.SUPABASE_URL||c.SUPABASE_URL.includes("pqdkpgfzvdvgwotxckde")||
-     !c.SUPABASE_PUBLISHABLE_KEY||c.SUPABASE_PUBLISHABLE_KEY.includes("sb_publishable_z4l1e_-eMmLW6EQ4MUKk_Q_46cvCCs6")){
+  if(!c.SUPABASE_URL||c.SUPABASE_URL.includes("YOUR_PROJECT_REF")||
+     !c.SUPABASE_PUBLISHABLE_KEY||c.SUPABASE_PUBLISHABLE_KEY.includes("YOUR_KEY")){
     window.laoMarketSupabase=null; console.warn("LaoMarket: configure config.js first."); return;
   }
   window.laoMarketSupabase=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY,{

@@ -309,10 +309,10 @@ on conflict (key) do nothing;
 
 -- After creating your own user account in Authentication > Users, run this
 -- separately in SQL Editor after replacing the email with your own admin email:
--- update public.profiles p
--- set role = 'admin'
--- from auth.users u
--- where p.id = u.id and u.email = 'YOUR_ADMIN_EMAIL_HERE';
+update public.profiles p
+set role = 'admin'
+from auth.users u
+where p.id = u.id and u.email = 'fahjk2297@gmail.com';
 
 
 -- Promotions and customer-support knowledge base

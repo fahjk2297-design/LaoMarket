@@ -42,7 +42,18 @@
 <footer class="footer"><div class="footerin"><div><div class="logo" style="color:white">Lao<span>Market</span></div><p>ตลาดออนไลน์สำหรับประเทศลาว</p></div><div><b>บริการลูกค้า</b><p>คำถามที่พบบ่อย · การคืนสินค้า · ติดต่อเรา</p></div><div style="max-width:390px"><b>หมายเหตุ</b><p class="small" style="color:#d9eee5">LaoMarket ใช้ Supabase เป็นฐานข้อมูลและระบบบัญชีผู้ใช้ การรับชำระเงินจริงต้องเปิดใช้งานผู้ให้บริการชำระเงินและ webhook ของร้าน</p></div></div></footer>
 
 <div class="modalbg" id="cart"><div class="modal"><div class="mhead"><h2>🛒 ตะกร้าสินค้า</h2><button onclick="closeM('cart')">ปิด ✕</button></div><div id="cartItems"></div><div id="cartActions"></div></div></div>
-<div class="modalbg" id="login"><div class="modal"><div class="mhead"><h2>เข้าสู่ระบบ / สมัครสมาชิก</h2><button onclick="closeM('login')">ปิด ✕</button></div><div class="notice">ระบบบัญชีผู้ใช้ของ LaoMarket เชื่อมต่อกับ Supabase Auth</div><div style="display:flex;gap:8px"><button onclick="authMode='login';document.getElementById('authNameWrap').hidden=true">เข้าสู่ระบบ</button><button onclick="authMode='signup';document.getElementById('authNameWrap').hidden=false">สมัครสมาชิก</button></div><form id="authForm"><div class="field" id="authNameWrap" hidden><label>ชื่อที่แสดง</label><input id="authName"></div><div class="field"><label>อีเมล</label><input id="authEmail" type="email" required></div><div class="field"><label>รหัสผ่าน</label><input type="password" required minlength="6"></div><button class="primary">ดำเนินการ</button></form><p id="authStatus" class="muted"></p></div></div>
+<div class="modalbg" id="login"><div class="modal"><div class="mhead"><h2>เข้าสู่ระบบ / สมัครสมาชิก</h2><button type="button" onclick="closeM('login')">ปิด ✕</button></div>
+<div class="authtabs"><button type="button" id="tabLogin" class="active" onclick="setAuthMode('login')">🔑 เข้าสู่ระบบ</button><button type="button" id="tabSignup" onclick="setAuthMode('signup')">✨ สมัครสมาชิก</button></div>
+<form id="authForm" novalidate>
+<div id="signupFields" hidden>
+<div class="field"><label>👤 ຊື່ ແລະ ນາມສະກຸນ</label><input id="authName" autocomplete="name" placeholder="ຕົວຢ່າງ: ສົມຊາຍ ວົງສະຫວັນ"></div>
+<div class="field"><label>📱 ເບີໂທລະສັບ</label><input id="authPhone" type="tel" autocomplete="tel" placeholder="+85620xxxxxxxx"></div>
+<div class="field"><label>🏠 ທີ່ຢູ່</label><textarea id="authAddress" rows="2" autocomplete="street-address" placeholder="ບ້ານ, ເມືອງ, ແຂວງ"></textarea></div>
+</div>
+<div class="field"><label>✉️ ອີເມວ</label><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
+<div class="field"><label>🔒 ລະຫັດຜ່ານ</label><input id="authPass" type="password" autocomplete="current-password" placeholder="ຢ່າງໜ້ອຍ 6 ຕົວ"></div>
+<div class="field" id="pass2Wrap" hidden><label>🔒 ຢືນຢັນລະຫັດຜ່ານ</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="ພິມລະຫັດຜ່ານອີກຄັ້ງ"></div>
+<button type="submit" class="primary" id="authSubmit" style="width:100%">เข้าสู่ระบบ</button></form><p id="authStatus" class="muted"></p></div></div>
 <div class="modalbg" id="seller"><div class="modal"><div class="mhead"><h2>🏪 สมัครเปิดร้านค้า</h2><button onclick="closeM('seller')">ปิด ✕</button></div><form id="sellerForm"><div class="field"><label>ชื่อร้าน</label><input required id="shopName"></div><div class="field"><label>ชื่อผู้ติดต่อ</label><input required></div><div class="field"><label>เบอร์โทร</label><input required placeholder="+856..."></div><div class="field"><label>หมวดหมู่</label><select><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><button class="primary">ส่งใบสมัคร</button></form></div></div>
 <div class="modalbg" id="affiliate"><div class="modal"><div class="mhead"><h2>🔗 สมัคร Affiliate</h2><button onclick="closeM('affiliate')">ปิด ✕</button></div><form id="affForm"><div class="field"><label>ชื่อ</label><input required id="affName"></div><div class="field"><label>อีเมล</label><input required type="email"></div><div class="field"><label>ช่องทางโปรโมต</label><select><option>Facebook</option><option>TikTok</option><option>WhatsApp</option><option>เว็บไซต์</option></select></div><button class="primary">สร้างลิงก์แนะนำสินค้า</button></form><div id="affResult"></div></div></div>
 <div class="modalbg" id="admin"><div class="modal"><div class="mhead"><h2>🛡️ แผงผู้ดูแล ()</h2><button onclick="closeM('admin')">ปิด ✕</button></div><div class="notice">แผงนี้ไม่มีระบบยืนยันสิทธิ์แอดมิน ห้ามใช้จัดการธุรกรรมจริง</div><p>จำนวนสินค้า: <b id="adminCount">0</b> · คำสั่งซื้อ: <b id="orderCount">0</b></p><h3>เพิ่มสินค้า</h3><form id="addForm"><div class="field"><label>ชื่อสินค้า</label><input required id="newName"></div><div class="field"><label>ราคา (กีบ)</label><input required id="newPrice" type="number" min="1"></div><div class="field"><label>หมวดหมู่</label><select id="newCat"><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><div class="field"><label>อีโมจิสินค้า</label><input id="newEmoji" value="🛍️"></div><button class="primary">เพิ่มสินค้า</button></form></div></div>
@@ -180,18 +191,28 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
   if(typeof renderPromos==='function')renderPromos();
  }
  const form=document.getElementById('authForm'),hb=document.querySelector('header button.primary');
- function setBtn(s){if(hb)hb.textContent=s?'ออกจากระบบ ('+(s.user.email||'')+')':'เข้าสู่ระบบ'}
+ function setBtn(s){if(hb)hb.textContent=s?'ออกจากระบบ ('+(s.user.email||'')+')':'เข้าสู่ระบบ';if(s){const m=s.user.user_metadata||{};[['buyerName',m.display_name],['buyerPhone',m.phone],['buyerAddress',m.address]].forEach(([i,v])=>{const el=document.getElementById(i);if(el&&v&&!el.value)el.value=v})}}
  sb.auth.getSession().then(r=>setBtn(r.data.session));
  sb.auth.onAuthStateChange((_e,s)=>setBtn(s));
  const errMap=[[/invalid login/i,'ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ'],[/not confirmed/i,'ຍັງບໍ່ໄດ້ຢືນຢັນອີເມວ — ກົດລິ້ງໃນກ່ອງຈົດໝາຍກ່ອນ'],[/already registered|already been registered/i,'ອີເມວນີ້ສະໝັກແລ້ວ — ໃຫ້ກົດ "ເຂົ້າສູ່ລະບົບ"'],[/rate limit/i,'ສົ່ງອີເມວຖີ່ເກີນໄປ — ລໍຖ້າສັກຄູ່ ຫຼື ປິດ Confirm email ໃນ Supabase'],[/password/i,'ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ'],[/database error/i,'ຖານຂໍ້ມູນຜິດພາດ — ກວດວ່າຣັນ schema.sql ທັງໄຟລ໌ແລ້ວ']];
  if(form)form.addEventListener('submit',async e=>{
   e.preventDefault();
-  const email=document.getElementById('authEmail').value.trim(),pw=form.querySelector('input[type=password]').value;
-  const name=document.getElementById('authName')?.value.trim()||'',out=document.getElementById('authStatus'),btn=form.querySelector('button.primary');
+  const g=id=>document.getElementById(id).value.trim(),email=g('authEmail'),pw=document.getElementById('authPass').value,
+   out=document.getElementById('authStatus'),btn=document.getElementById('authSubmit'),signup=authMode==='signup';
+  let meta={};
+  if(!/^\S+@\S+\.\S+$/.test(email)){out.textContent='ກະລຸນາໃສ່ອີເມວໃຫ້ຖືກຕ້ອງ';return}
+  if(pw.length<6){out.textContent='ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ';return}
+  if(signup){
+   const name=g('authName'),phone=g('authPhone'),address=g('authAddress');
+   if(!name){out.textContent='ກະລຸນາໃສ່ຊື່';return}
+   if(!/^\+?[0-9][0-9\s-]{7,16}$/.test(phone)){out.textContent='ເບີໂທບໍ່ຖືກຕ້ອງ (ຕົວຢ່າງ +85620xxxxxxxx)';return}
+   if(!address){out.textContent='ກະລຸນາໃສ່ທີ່ຢູ່';return}
+   if(pw!==document.getElementById('authPass2').value){out.textContent='ລະຫັດຜ່ານສອງຊ່ອງບໍ່ກົງກັນ';return}
+   meta={display_name:name,phone:phone.replace(/[\s-]/g,''),address};
+  }
   out.textContent='ກຳລັງດຳເນີນການ...';if(btn)btn.disabled=true;
   try{
-   const signup=authMode==='signup';
-   const r=signup?await sb.auth.signUp({email,password:pw,options:{data:{display_name:name}}}):await sb.auth.signInWithPassword({email,password:pw});
+   const r=signup?await sb.auth.signUp({email,password:pw,options:{data:meta}}):await sb.auth.signInWithPassword({email,password:pw});
    if(r.error){const m=errMap.find(x=>x[0].test(r.error.message));out.textContent=m?m[1]:r.error.message;console.error(r.error);return}
    if(signup&&!r.data.session){out.textContent=r.data.user&&r.data.user.identities&&r.data.user.identities.length===0?'ອີເມວນີ້ສະໝັກແລ້ວ — ໃຫ້ກົດ "ເຂົ້າສູ່ລະບົບ"':'ສະໝັກສຳເລັດ! ກະລຸນາກົດລິ້ງຢືນຢັນທີ່ສົ່ງໄປທາງອີເມວ ແລ້ວຄ່ອຍເຂົ້າສູ່ລະບົບ';return}
    out.textContent=signup?'ສະໝັກສະມາຊິກສຳເລັດ':'ເຂົ້າສູ່ລະບົບສຳເລັດ';form.reset();setTimeout(()=>{closeM('login');out.textContent=''},700);
@@ -254,5 +275,29 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
   toast('ສັ່ງຊື້ສຳເລັດ ເລກທີ '+data);
  };
 })();
+</script>
+<style>
+.authtabs{display:flex;gap:10px;margin:14px 0}
+.authtabs button{flex:1;padding:12px 8px;border-radius:12px;border:2px solid #cfe3d6;background:#f4faf6;color:#2b4a39;font-weight:800;font-size:15px;cursor:pointer;transition:.15s}
+.authtabs button:hover{transform:translateY(-1px);border-color:#0f9d58}
+#tabLogin.active{background:linear-gradient(135deg,#0f9d58,#1a73e8);color:#fff;border-color:transparent;box-shadow:0 6px 16px rgba(26,115,232,.35)}
+#tabSignup.active{background:linear-gradient(135deg,#ff8a00,#e91e63);color:#fff;border-color:transparent;box-shadow:0 6px 16px rgba(233,30,99,.35)}
+#authForm textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cdd8d1;border-radius:10px;font:inherit;resize:vertical}
+#authForm.signup #authSubmit{background:linear-gradient(135deg,#ff8a00,#e91e63);border:0;color:#fff}
+#authForm.login #authSubmit{background:linear-gradient(135deg,#0f9d58,#1a73e8);border:0;color:#fff}
+#authStatus{min-height:20px;font-weight:600}
+</style>
+<script>
+function setAuthMode(m){
+ authMode=m;const s=m==='signup',f=document.getElementById('authForm');
+ document.getElementById('tabLogin').classList.toggle('active',!s);
+ document.getElementById('tabSignup').classList.toggle('active',s);
+ document.getElementById('signupFields').hidden=!s;document.getElementById('pass2Wrap').hidden=!s;
+ f.className=s?'signup':'login';
+ document.getElementById('authPass').autocomplete=s?'new-password':'current-password';
+ document.getElementById('authSubmit').textContent=s?'สมัครสมาชิก':'เข้าสู่ระบบ';
+ document.getElementById('authStatus').textContent='';
+}
+document.addEventListener('DOMContentLoaded',()=>setAuthMode('login'));
 </script>
 </body></html>

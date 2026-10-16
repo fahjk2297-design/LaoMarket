@@ -52,7 +52,7 @@
 </div>
 <div class="field"><label>✉️ ອີເມວ</label><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
 <div class="field"><label>🔒 ລະຫັດຜ່ານ</label><input id="authPass" type="password" autocomplete="current-password" placeholder="ຢ່າງໜ້ອຍ 6 ຕົວ"></div>
-<div class="field" id="pass2Wrap" hidden><label>🔒 ຢືນຢັນລະຫັດຜ່ານ</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="ພິມລະຫັດຜ່ານອີກຄັ້ງ"></div>
+<div class="field" id="pass2Wrap" hidden><label>🔒 ຢືນຢັນລະຫັດຜ່ານອີກຄັ້ງ</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="ພິມລະຫັດຜ່ານອີກຄັ້ງ"></div>
 <button type="submit" class="primary" id="authSubmit" style="width:100%">เข้าสู่ระบบ</button></form><p id="authStatus" class="muted"></p></div></div>
 <div class="modalbg" id="seller"><div class="modal"><div class="mhead"><h2>🏪 สมัครเปิดร้านค้า</h2><button onclick="closeM('seller')">ปิด ✕</button></div><form id="sellerForm"><div class="field"><label>ชื่อร้าน</label><input required id="shopName"></div><div class="field"><label>ชื่อผู้ติดต่อ</label><input required></div><div class="field"><label>เบอร์โทร</label><input required placeholder="+856..."></div><div class="field"><label>หมวดหมู่</label><select><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><button class="primary">ส่งใบสมัคร</button></form></div></div>
 <div class="modalbg" id="affiliate"><div class="modal"><div class="mhead"><h2>🔗 สมัคร Affiliate</h2><button onclick="closeM('affiliate')">ปิด ✕</button></div><form id="affForm"><div class="field"><label>ชื่อ</label><input required id="affName"></div><div class="field"><label>อีเมล</label><input required type="email"></div><div class="field"><label>ช่องทางโปรโมต</label><select><option>Facebook</option><option>TikTok</option><option>WhatsApp</option><option>เว็บไซต์</option></select></div><button class="primary">สร้างลิงก์แนะนำสินค้า</button></form><div id="affResult"></div></div></div>
@@ -277,6 +277,7 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
 })();
 </script>
 <style>
+[hidden]{display:none!important}
 .authtabs{display:flex;gap:10px;margin:14px 0}
 .authtabs button{flex:1;padding:12px 8px;border-radius:12px;border:2px solid #cfe3d6;background:#f4faf6;color:#2b4a39;font-weight:800;font-size:15px;cursor:pointer;transition:.15s}
 .authtabs button:hover{transform:translateY(-1px);border-color:#0f9d58}
@@ -292,7 +293,7 @@ function setAuthMode(m){
  authMode=m;const s=m==='signup',f=document.getElementById('authForm');
  document.getElementById('tabLogin').classList.toggle('active',!s);
  document.getElementById('tabSignup').classList.toggle('active',s);
- document.getElementById('signupFields').hidden=!s;document.getElementById('pass2Wrap').hidden=!s;
+ document.getElementById('signupFields').hidden=!s;document.getElementById('pass2Wrap').hidden=!s;document.getElementById('authPass2').value='';
  f.className=s?'signup':'login';
  document.getElementById('authPass').autocomplete=s?'new-password':'current-password';
  document.getElementById('authSubmit').textContent=s?'สมัครสมาชิก':'เข้าสู่ระบบ';

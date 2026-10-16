@@ -31,7 +31,7 @@
 <section class="panel"><div class="section" style="margin-top:0"><h2>ขายและสร้างรายได้กับ LaoMarket</h2></div><div class="features">
 <div class="feature"><div class="emoji">🏪</div><h3>เปิดร้านค้า</h3><p class="muted">ลงสินค้าและติดตามคำสั่งซื้อ</p><button onclick="openM('seller')">สมัครเป็นผู้ขาย</button></div>
 <div class="feature"><div class="emoji">🔗</div><h3>Affiliate</h3><p class="muted">สร้างลิงก์แนะนำสินค้าใน</p><button onclick="openM('affiliate')">เริ่มแนะนำสินค้า</button></div>
-<div class="feature"><div class="emoji">🛡️</div><h3>ผู้ดูแลระบบ</h3><p class="muted">ดูแลระบบและจัดการข้อมูล</p><button onclick="openM('admin')">เปิดแผงผู้ดูแล</button></div></div></section>
+<div class="feature"><div class="emoji">🏪</div><h3>ຈັດການຮ້ານຄ້າ</h3><p class="muted">ສຳລັບຄົນຢາກຂາຍຂອງ: ເພີ່ມສິນຄ້າ ສະຕັອກ ລາຄາຕົ້ນທຶນ ແລະ ລາຄາຂາຍ</p><button class="primary" onclick="openMyStore()">ເປີດ / ຈັດການຮ້ານຄ້າ</button></div></div></section>
 
 <section class="panel" id="lm-promo-section" style="margin:24px auto;background:linear-gradient(120deg,#ecfdf5,#fff7ed);border:1px solid #cde9d9">
   <div class="section" style="margin-top:0"><h2 id="lm-promo-heading">🎉 ໂປຣໂມຊັນພິເສດ</h2><span class="muted" id="lm-promo-sub">ຂໍ້ສະເໜີທີ່ກຳລັງໃຊ້ໄດ້</span></div>
@@ -57,6 +57,32 @@
 <div class="modalbg" id="seller"><div class="modal"><div class="mhead"><h2>🏪 สมัครเปิดร้านค้า</h2><button onclick="closeM('seller')">ปิด ✕</button></div><form id="sellerForm"><div class="field"><label>ชื่อร้าน</label><input required id="shopName"></div><div class="field"><label>ชื่อผู้ติดต่อ</label><input required></div><div class="field"><label>เบอร์โทร</label><input required placeholder="+856..."></div><div class="field"><label>หมวดหมู่</label><select><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><button class="primary">ส่งใบสมัคร</button></form></div></div>
 <div class="modalbg" id="affiliate"><div class="modal"><div class="mhead"><h2>🔗 สมัคร Affiliate</h2><button onclick="closeM('affiliate')">ปิด ✕</button></div><form id="affForm"><div class="field"><label>ชื่อ</label><input required id="affName"></div><div class="field"><label>อีเมล</label><input required type="email"></div><div class="field"><label>ช่องทางโปรโมต</label><select><option>Facebook</option><option>TikTok</option><option>WhatsApp</option><option>เว็บไซต์</option></select></div><button class="primary">สร้างลิงก์แนะนำสินค้า</button></form><div id="affResult"></div></div></div>
 <div class="modalbg" id="admin"><div class="modal"><div class="mhead"><h2>🛡️ แผงผู้ดูแล ()</h2><button onclick="closeM('admin')">ปิด ✕</button></div><div class="notice">แผงนี้ไม่มีระบบยืนยันสิทธิ์แอดมิน ห้ามใช้จัดการธุรกรรมจริง</div><p>จำนวนสินค้า: <b id="adminCount">0</b> · คำสั่งซื้อ: <b id="orderCount">0</b></p><h3>เพิ่มสินค้า</h3><form id="addForm"><div class="field"><label>ชื่อสินค้า</label><input required id="newName"></div><div class="field"><label>ราคา (กีบ)</label><input required id="newPrice" type="number" min="1"></div><div class="field"><label>หมวดหมู่</label><select id="newCat"><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><div class="field"><label>อีโมจิสินค้า</label><input id="newEmoji" value="🛍️"></div><button class="primary">เพิ่มสินค้า</button></form></div></div>
+<div class="modalbg" id="mystore"><div class="modal" style="max-width:760px;width:96%;max-height:92vh;overflow:auto">
+<style>.msgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.msgrid{grid-template-columns:1fr}}
+.msitem{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.msitem b{font-size:15px}.msitem .acts{display:flex;gap:6px}.msbadge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:#e8f5ee;color:#087f5b}
+.msbadge.off{background:#f1f1f1;color:#666}.msbad{color:#c93832}.msgood{color:#087f5b}</style>
+<div class="mhead"><h2>🏪 ຈັດການຮ້ານຄ້າ</h2><button type="button" onclick="closeM('mystore')">ປິດ ✕</button></div>
+<div id="ms-state" class="muted"></div>
+<div id="ms-main" hidden>
+<div id="ms-shopline" style="margin-bottom:8px"></div>
+<form id="ms-form" novalidate><input type="hidden" id="ms-id">
+<h3 id="ms-title" style="margin:6px 0">➕ ເພີ່ມສິນຄ້າໃໝ່</h3>
+<div class="field"><label>ຊື່ສິນຄ້າ</label><input id="ms-name" maxlength="200" placeholder="ຕົວຢ່າງ: ກາເຟລາວ 500 ກຣາມ"></div>
+<div class="msgrid">
+<div class="field"><label>ໝວດໝູ່</label><select id="ms-cat"><option value="อิเล็กทรอนิกส์">อิเล็กทรอนิกส์</option><option value="แฟชั่น">แฟชั่น</option><option value="บ้านและสวน">บ้านและสวน</option><option value="ความงาม">ความงาม</option><option value="อาหาร">อาหาร</option><option value="อื่น ๆ">อื่น ๆ</option></select></div>
+<div class="field"><label>ສະຖານະ</label><select id="ms-status"><option value="active">ເຜີຍແພ່ (ຂາຍ)</option><option value="hidden">ຊ່ອນ</option><option value="draft">ຮ່າງ</option></select></div>
+<div class="field"><label>💰 ລາຄາຕົ້ນທຶນ (ກີບ)</label><input id="ms-cost" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+<div class="field"><label>🏷️ ລາຄາຂາຍ (ກີບ)</label><input id="ms-price" type="number" min="1" step="1" inputmode="numeric" placeholder="0"></div>
+<div class="field"><label>📦 ຈຳນວນສະຕັອກ</label><input id="ms-stock" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+</div>
+<div id="ms-profit" class="muted" style="margin:4px 0 8px;font-weight:700"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="submit" class="primary" id="ms-save">ບັນທຶກສິນຄ້າ</button><button type="button" id="ms-cancel" hidden>ຍົກເລີກການແກ້ໄຂ</button></div>
+</form>
+<div id="ms-msg" style="min-height:20px;margin:8px 0;font-weight:600"></div>
+<h3>ສິນຄ້າຂອງຂ້ອຍ</h3><div id="ms-list"></div>
+<p class="muted" style="font-size:12px">ລາຄາຕົ້ນທຶນເຫັນສະເພາະເຈົ້າຂອງຮ້ານ ແລະ admin — ລູກຄ້າບໍ່ເຫັນ.</p>
+</div></div></div>
 <div class="modalbg" id="checkout"><div class="modal"><div class="mhead"><h2>ยืนยันคำสั่งซื้อ ()</h2><button onclick="closeM('checkout')">ปิด ✕</button></div><div class="notice">ไม่มีการตัดเงินจริง กรุณาอย่าโอนเงินจากหน้าทดสอบนี้</div><form id="checkoutForm"><div class="field"><label>ชื่อผู้รับ</label><input required id="buyerName"></div><div class="field"><label>เบอร์โทร</label><input required id="buyerPhone" placeholder="+856..."></div><div class="field"><label>ที่อยู่จัดส่ง</label><textarea required id="buyerAddress" rows="3"></textarea></div><div class="field"><label>วิธีชำระเงิน ()</label><select id="pay"><option>ชำระปลายทาง</option><option>โอนธนาคาร (ยังไม่เชื่อมต่อ)</option><option>QR Payment (ยังไม่เชื่อมต่อ)</option></select></div><button class="primary">สั่งซื้อ</button></form></div></div><div id="toast" class="toast"></div>
 <script>
 const defaults=[
@@ -300,5 +326,79 @@ function setAuthMode(m){
  document.getElementById('authStatus').textContent='';
 }
 document.addEventListener('DOMContentLoaded',()=>setAuthMode('login'));
+</script>
+
+<script>
+(function(){
+ const sb=window.laoMarketSupabase,$=id=>document.getElementById(id);
+ const ST={active:'ເຜີຍແພ່',hidden:'ຊ່ອນ',draft:'ຮ່າງ',out_of_stock:'ໝົດສະຕັອກ'};
+ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const fmt=n=>Number(n||0).toLocaleString('en-US')+' ₭';
+ let shop=null,prods=[],costs={};
+ window.openMyStore=async function(){
+  if(!sb){toast('ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ Supabase');return}
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){openM('login');toast('ກະລຸນາເຂົ້າລະບົບກ່ອນ');return}
+  openM('mystore');await load(session.user.id);
+ };
+ async function load(uid){
+  $('ms-state').textContent='ກຳລັງໂຫຼດ...';$('ms-main').hidden=true;
+  const {data,error}=await sb.from('shops').select('id,name,status').eq('owner_id',uid);
+  if(error){$('ms-state').textContent='ໂຫຼດບໍ່ໄດ້: '+error.message;return}
+  const shops=data||[];shop=shops.find(s=>s.status==='approved')||shops[0]||null;
+  if(!shop){$('ms-state').innerHTML='ທ່ານຍັງບໍ່ມີຮ້ານຄ້າ. <button type="button" class="primary" onclick="closeM(\'mystore\');openM(\'seller\')">ສະໝັກເປີດຮ້ານ</button>';return}
+  if(shop.status!=='approved'){$('ms-state').textContent='ຮ້ານ "'+shop.name+'" '+(shop.status==='pending'?'ກຳລັງລໍຖ້າ admin ອະນຸມັດ — ອະນຸມັດແລ້ວຈຶ່ງເພີ່ມສິນຄ້າໄດ້':'ຖືກລະງັບ ຫຼື ຖືກປະຖິເສດ — ກະລຸນາຕິດຕໍ່ admin');return}
+  $('ms-state').textContent='';$('ms-main').hidden=false;$('ms-shopline').innerHTML='🏪 <b>'+esc(shop.name)+'</b>';
+  resetForm();await loadProducts();
+ }
+ async function loadProducts(){
+  const [p,c]=await Promise.all([
+   sb.from('products').select('id,name,category,price_lak,stock,status').eq('shop_id',shop.id).order('name'),
+   sb.from('product_costs').select('product_id,cost_lak').eq('shop_id',shop.id)]);
+  if(p.error)$('ms-msg').textContent='ໂຫຼດສິນຄ້າບໍ່ໄດ້: '+p.error.message;
+  prods=p.data||[];costs={};(c.data||[]).forEach(x=>costs[x.product_id]=Number(x.cost_lak));render();
+ }
+ function render(){
+  $('ms-list').innerHTML=prods.length?prods.map(p=>{
+   const cost=costs[p.id],profit=cost==null?null:Number(p.price_lak)-cost;
+   return `<div class="msitem"><div><b>${esc(p.name)}</b> <span class="msbadge ${p.status==='active'?'':'off'}">${ST[p.status]||p.status}</span><br>
+   <span class="muted">${esc(p.category)} · ຂາຍ ${fmt(p.price_lak)} · ທຶນ ${cost==null?'—':fmt(cost)} · ສະຕັອກ ${p.stock}</span>
+   ${profit==null?'':`<br><span class="${profit<0?'msbad':'msgood'}">ກຳໄລ/ຊິ້ນ ${fmt(profit)}</span>`}</div>
+   <div class="acts"><button type="button" onclick="msEdit('${p.id}')">ແກ້ໄຂ</button><button type="button" class="danger" onclick="msDelete('${p.id}')">ລຶບ</button></div></div>`}).join(''):'<p class="muted">ຍັງບໍ່ມີສິນຄ້າ. ເພີ່ມສິນຄ້າທຳອິດໄດ້ຈາກຟອມດ້ານເທິງ.</p>';
+ }
+ function resetForm(){
+  $('ms-form').reset();$('ms-id').value='';$('ms-title').textContent='➕ ເພີ່ມສິນຄ້າໃໝ່';$('ms-cancel').hidden=true;$('ms-save').textContent='ບັນທຶກສິນຄ້າ';$('ms-profit').textContent='';
+ }
+ function profitPreview(){
+  const c=Number($('ms-cost').value),p=Number($('ms-price').value),el=$('ms-profit');
+  if(!$('ms-cost').value||!$('ms-price').value||!(p>0)){el.textContent='';return}
+  const g=p-c;el.className=g<0?'msbad':'msgood';el.textContent='ກຳໄລຕໍ່ຊິ້ນ: '+fmt(g)+' ('+(p?Math.round(g/p*100):0)+'% ຂອງລາຄາຂາຍ)'+(g<0?' ⚠ ຂາດທຶນ':'');
+ }
+ if(sb){
+  $('ms-cost').addEventListener('input',profitPreview);$('ms-price').addEventListener('input',profitPreview);
+  $('ms-cancel').onclick=resetForm;
+  window.msEdit=id=>{const p=prods.find(x=>x.id===id);if(!p)return;
+   $('ms-id').value=p.id;$('ms-name').value=p.name;$('ms-cat').value=p.category;$('ms-cost').value=costs[p.id]??'';$('ms-price').value=p.price_lak;$('ms-stock').value=p.stock;
+   $('ms-status').value=p.status==='out_of_stock'?'active':p.status;$('ms-title').textContent='✏️ ແກ້ໄຂສິນຄ້າ';$('ms-cancel').hidden=false;$('ms-save').textContent='ບັນທຶກການແກ້ໄຂ';profitPreview();$('ms-form').scrollIntoView({behavior:'smooth',block:'start'})};
+  window.msDelete=async id=>{if(!confirm('ລຶບສິນຄ້ານີ້ບໍ?'))return;
+   const {error}=await sb.rpc('seller_delete_product',{p_id:id});
+   if(error){$('ms-msg').textContent='ລຶບບໍ່ສຳເລັດ: '+error.message;return}
+   $('ms-msg').textContent='ລຶບສິນຄ້າແລ້ວ';await loadProducts();if(window.lmReload)window.lmReload()};
+  $('ms-form').addEventListener('submit',async e=>{
+   e.preventDefault();
+   const name=$('ms-name').value.trim(),cost=Number($('ms-cost').value),price=Number($('ms-price').value),stock=Number($('ms-stock').value),msg=$('ms-msg'),btn=$('ms-save');
+   if(!name){msg.textContent='ກະລຸນາໃສ່ຊື່ສິນຄ້າ';return}
+   if($('ms-cost').value===''||!Number.isInteger(cost)||cost<0){msg.textContent='ລາຄາຕົ້ນທຶນຕ້ອງເປັນຈຳນວນເຕັມ ແລະ ບໍ່ຕິດລົບ';return}
+   if(!Number.isInteger(price)||price<=0){msg.textContent='ລາຄາຂາຍຕ້ອງເປັນຈຳນວນເຕັມ ແລະ ຫຼາຍກວ່າ 0';return}
+   if($('ms-stock').value===''||!Number.isInteger(stock)||stock<0){msg.textContent='ຈຳນວນສະຕັອກຕ້ອງເປັນຈຳນວນເຕັມ ແລະ ບໍ່ຕິດລົບ';return}
+   if(price<cost&&!confirm('ລາຄາຂາຍຕ່ຳກວ່າຕົ້ນທຶນ (ຂາດທຶນ). ບັນທຶກຕໍ່ບໍ?'))return;
+   btn.disabled=true;msg.textContent='ກຳລັງບັນທຶກ...';
+   const {error}=await sb.rpc('seller_save_product',{p_id:$('ms-id').value||null,p_shop:shop.id,p_name:name,p_category:$('ms-cat').value,p_price:price,p_cost:cost,p_stock:stock,p_status:$('ms-status').value});
+   btn.disabled=false;
+   if(error){msg.textContent='ບັນທຶກບໍ່ສຳເລັດ: '+error.message;return}
+   resetForm();msg.textContent='✅ ບັນທຶກສິນຄ້າແລ້ວ';await loadProducts();if(window.lmReload)window.lmReload();
+  });
+ }
+})();
 </script>
 </body></html>

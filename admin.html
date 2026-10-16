@@ -29,13 +29,13 @@
 <body>
 <section class="login-screen" id="loginScreen"><div class="login-card">
 <div class="brand">Lao<span>Market</span> Admin</div><h2>เข้าสู่ระบบผู้ดูแล</h2><p class="muted">แผงควบคุมลูกค้า ร้านค้า คำสั่งซื้อ และการชำระเงิน</p>
-<div class="note"><b>สำหรับทดสอบหน้าตาเท่านั้น</b><br>รหัสผ่านด้านล่างเป็นรหัสที่ฝังอยู่ในไฟล์ ไม่ใช่ระบบรักษาความปลอดภัยจริง ห้ามใช้กับเว็บไซต์ที่เปิดสาธารณะ</div>
+
 <form id="loginForm"><div class="field"><label>อีเมล</label><input id="username" autocomplete="username" required></div><div class="field"><label>รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" required></div><button class="primary" style="width:100%">เข้าสู่แผงผู้ดูแล</button></form>
 <p class="muted">เข้าสู่ระบบด้วยบัญชี Admin ของ Supabase</p></div></section>
 <div class="layout" id="app">
 <aside class="sidebar"><div class="brand">Lao<span>Market</span><div style="font-size:12px;font-weight:500;color:#b9d8cb">ADMIN CONSOLE</div></div>
 <button class="navbtn active" data-page="dashboard">▦　ภาพรวมระบบ</button><button class="navbtn" data-page="customers">♙　จัดการลูกค้า</button><button class="navbtn" data-page="sellers">▤　จัดการร้านค้า</button><button class="navbtn" data-page="products">▣　จัดการสินค้า</button><button class="navbtn" data-page="orders">🛒　คำสั่งซื้อ</button><button class="navbtn" data-page="payments">💳　การชำระเงิน</button><button class="navbtn" data-page="payouts">⇧　ถอนเงินร้านค้า</button><button class="navbtn" data-page="affiliates">🔗　Affiliate / คอมมิชชัน</button><button class="navbtn" data-page="reports">▥　รายงาน</button><button class="navbtn" data-page="promotions">🎉　ໂປຣໂມຊັນ / Promotions</button><button class="navbtn" data-page="settings">⚙　ตั้งค่าระบบ</button>
-<div class="sidefoot">LaoMarket Admin Demo<br>Currency: LAK · ข้อมูล</div></aside>
+<div class="sidefoot">LaoMarket Admin<br>Currency: LAK · ข้อมูล</div></aside>
 <main class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:10px"><button class="mobilemenu" id="mobileMenu">☰</button><h1 id="pageTitle">ภาพรวมระบบ</h1></div><div style="display:flex;align-items:center;gap:10px"><span class="muted" id="today"></span><button onclick="exportData()">ส่งออกข้อมูล</button><button class="danger" id="logoutBtn">ออกจากระบบ</button></div></header>
 <div class="content">
 <section class="page active" id="page-dashboard">
@@ -79,7 +79,7 @@
     </div>
   </div>
   <div class="panel" style="margin-top:16px">
-    <div class="panelhead"><h2>ໂປຣໂມຊັນທັງໝົດ</h2><span class="muted">ໃນ Browser</span></div>
+    <div class="panelhead"><h2>ໂປຣໂມຊັນທັງໝົດ</h2><span class="muted">Supabase</span></div>
     <div class="tablewrap"><table><thead><tr><th>ຊື່</th><th>ຂໍ້ສະເໜີ</th><th>ໂຄດ</th><th>ວັນເລີ່ມ</th><th>ວັນສິ້ນສຸດ</th><th>ສະຖານະ</th><th>ຈັດການ</th></tr></thead><tbody id="lm-promo-rows"></tbody></table></div>
     <div class="note">ໝາຍເຫດ: ໂປຣໂມຊັນເກັບໃນ Supabase ແລະ ສະແດງໃນໜ້າຮ້ານເມື່ອເປີດໃຊ້ງານ.</div>
   </div>
@@ -192,7 +192,8 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
 <script>
 (function(){
 const sb=window.laoMarketSupabase,$=id=>document.getElementById(id);
-if(!sb){$('loginForm').onsubmit=e=>{e.preventDefault();alert('ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ config.js (Supabase URL / Publishable key)')};return}
+function loginMsg(h){let el=$('loginMsg');if(!el){el=document.createElement('div');el.id='loginMsg';el.style.cssText='margin-top:12px;padding:12px;border-radius:10px;background:#fff3f2;color:#a32a25;font-size:14px;line-height:1.6;word-break:break-word';$('loginForm').after(el)}el.innerHTML=h||'';el.style.display=h?'block':'none'}
+if(!sb){const m='⚠ ຍັງເຊື່ອມ Supabase ບໍ່ໄດ້: <b>config.js</b> ຍັງເປັນຄ່າຕົວຢ່າງ (YOUR_PROJECT_REF / sb_publishable_YOUR_KEY) ຫຼື ໄຟລ໌ <b>config.js</b> ບໍ່ໄດ້ອັບໂຫຼດຢູ່ໃນໂຟນເດີດຽວກັນກັບ admin.html. ແກ້ config.js ແລ້ວອັບໂຫຼດໃໝ່.';loginMsg(m);$('loginForm').onsubmit=e=>{e.preventDefault();loginMsg(m)};return}
 const MAP={
  order:{pending:'รอชำระเงิน',confirmed:'ชำระแล้ว',processing:'กำลังจัดส่ง',shipped:'กำลังจัดส่ง',delivered:'สำเร็จ',cancelled:'ยกเลิก'},
  pay:{pending:'รอตรวจสอบ',confirmed:'ยืนยันแล้ว',failed:'ไม่ผ่าน',refunded:'คืนเงินแล้ว'},
@@ -211,10 +212,13 @@ async function guard(){
  const {data:{user}}=await sb.auth.getUser();
  if(!user){$('loginScreen').style.display='grid';$('app').style.display='none';return}
  const {data:p,error}=await sb.from('profiles').select('role,is_suspended').eq('id',user.id).single();
- if(error||!p||p.role!=='admin'||p.is_suspended){alert('บัญชีนี้ไม่มีสิทธิ์ Admin');await sb.auth.signOut();location.reload();return}
- me=user;$('loginScreen').style.display='none';$('app').style.display='block';init();await loadLive();
+ const back=async h=>{await sb.auth.signOut();$('loginScreen').style.display='grid';$('app').style.display='none';loginMsg(h)};
+ if(error){await back('ອ່ານໂປຣໄຟລ໌ບໍ່ໄດ້: <b>'+esc(error.message)+'</b><br>ກວດວ່າຣັນ <b>schema.sql</b> ທັງໄຟລ໌ໃນ Supabase ແລ້ວ, ແລະ ບັນຊີນີ້ມີແຖວໃນຕາຕະລາງ profiles.');return}
+ if(!p||p.is_suspended){await back('ບັນຊີນີ້ຖືກລະງັບ');return}
+ if(p.role!=='admin'){await back('ບັນຊີ <b>'+esc(user.email)+'</b> ຍັງບໍ່ເປັນ Admin (role ປັດຈຸບັນ: '+esc(p.role)+').<br>ໄປ Supabase → SQL Editor ແລ້ວຣັນ:<br><code style="user-select:all">update public.profiles set role=\'admin\' where id=\''+esc(user.id)+'\';</code><br>ຈາກນັ້ນເຂົ້າສູ່ລະບົບໃໝ່.');return}
+ me=user;loginMsg('');$('loginScreen').style.display='none';$('app').style.display='block';init();await loadLive();
 }
-$('loginForm').onsubmit=async e=>{e.preventDefault();const r=await sb.auth.signInWithPassword({email:$('username').value.trim(),password:$('password').value});if(r.error)alert(r.error.message);else guard()};
+$('loginForm').onsubmit=async e=>{e.preventDefault();const r=await sb.auth.signInWithPassword({email:$('username').value.trim(),password:$('password').value});if(r.error){const m=/invalid login/i.test(r.error.message)?'ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກ (ຫຼື ຍັງບໍ່ໄດ້ສະໝັກໃນໜ້າຮ້ານ)':/not confirmed/i.test(r.error.message)?'ຍັງບໍ່ໄດ້ຢືນຢັນອີເມວ — ກົດລິ້ງໃນກ່ອງຈົດໝາຍ ຫຼື ປິດ Confirm email ໃນ Supabase':esc(r.error.message);loginMsg(m)}else{loginMsg('');guard()}};
 $('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
 
 async function loadLive(){

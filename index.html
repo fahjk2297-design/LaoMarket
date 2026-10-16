@@ -73,7 +73,6 @@ function beginCheckout(){closeM("cart");openM("checkout")}
 document.getElementById("cartBtn").onclick=()=>openM("cart");
 document.getElementById("searchForm").onsubmit=e=>{e.preventDefault();query=document.getElementById("search").value.trim();category="";render();document.getElementById("productSection").scrollIntoView({behavior:"smooth"})};
 document.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{category=category===b.dataset.cat?"":b.dataset.cat;query="";document.getElementById("search").value="";render();document.getElementById("productSection").scrollIntoView({behavior:"smooth"})});
-document.getElementById("authForm").onsubmit=e=>{e.preventDefault();document.getElementById("authStatus").textContent="นี่เป็น ยังไม่มีระบบบัญชีออนไลน์จริง";toast("ระบบล็อกอินยังไม่ได้เชื่อมต่อฐานข้อมูล")};
 document.getElementById("sellerForm").onsubmit=e=>{e.preventDefault();let n=document.getElementById("shopName").value;closeM("seller");e.target.reset();toast("บันทึกใบสมัครร้าน "+n+" ในแล้ว")};
 document.getElementById("affForm").onsubmit=e=>{e.preventDefault();let code="LAO"+Math.random().toString(36).slice(2,8).toUpperCase(),url=location.href.split("?")[0]+"?ref="+code;document.getElementById("affResult").innerHTML=`<div class="panel"><b>ลิงก์แนะนำ</b><p style="overflow-wrap:anywhere">${esc(url)}</p><button onclick="copyLink('${url}')">คัดลอกลิงก์</button><p class="small">ยังไม่มีระบบติดตามยอดขายหรือจ่ายค่าคอมมิชชันจริง</p></div>`};
 function copyLink(s){if(navigator.clipboard)navigator.clipboard.writeText(s).then(()=>toast("คัดลอกลิงก์แล้ว")).catch(()=>toast(s));else toast(s)}
@@ -180,12 +179,24 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
   localStorage.setItem('lm_promotions',JSON.stringify((data||[]).map(p=>({id:p.id,title:p.title,description:p.description,discount:p.discount_label,code:p.promo_code,start:p.starts_at?.slice(0,10)||'',end:p.ends_at?.slice(0,10)||'',active:p.is_active}))));
   if(typeof renderPromos==='function')renderPromos();
  }
- const form=document.getElementById('authForm');
+ const form=document.getElementById('authForm'),hb=document.querySelector('header button.primary');
+ function setBtn(s){if(hb)hb.textContent=s?'ออกจากระบบ ('+(s.user.email||'')+')':'เข้าสู่ระบบ'}
+ sb.auth.getSession().then(r=>setBtn(r.data.session));
+ sb.auth.onAuthStateChange((_e,s)=>setBtn(s));
+ const errMap=[[/invalid login/i,'ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ'],[/not confirmed/i,'ຍັງບໍ່ໄດ້ຢືນຢັນອີເມວ — ກົດລິ້ງໃນກ່ອງຈົດໝາຍກ່ອນ'],[/already registered|already been registered/i,'ອີເມວນີ້ສະໝັກແລ້ວ — ໃຫ້ກົດ "ເຂົ້າສູ່ລະບົບ"'],[/rate limit/i,'ສົ່ງອີເມວຖີ່ເກີນໄປ — ລໍຖ້າສັກຄູ່ ຫຼື ປິດ Confirm email ໃນ Supabase'],[/password/i,'ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ'],[/database error/i,'ຖານຂໍ້ມູນຜິດພາດ — ກວດວ່າຣັນ schema.sql ທັງໄຟລ໌ແລ້ວ']];
  if(form)form.addEventListener('submit',async e=>{
-  e.preventDefault();const email=document.getElementById('authEmail').value.trim(),pw=form.querySelector('input[type=password]').value;
-  const name=document.getElementById('authName')?.value.trim()||'',out=document.getElementById('authStatus');out.textContent='กำลังดำเนินการ...';
-  const r=authMode==='signup'?await sb.auth.signUp({email,password:pw,options:{data:{display_name:name}}}):await sb.auth.signInWithPassword({email,password:pw});
-  if(r.error){out.textContent=r.error.message;return}out.textContent=authMode==='signup'?'สมัครสมาชิกสำเร็จ กรุณายืนยันอีเมลหากระบบร้องขอ':'เข้าสู่ระบบสำเร็จ';setTimeout(()=>closeM('login'),500);
+  e.preventDefault();
+  const email=document.getElementById('authEmail').value.trim(),pw=form.querySelector('input[type=password]').value;
+  const name=document.getElementById('authName')?.value.trim()||'',out=document.getElementById('authStatus'),btn=form.querySelector('button.primary');
+  out.textContent='ກຳລັງດຳເນີນການ...';if(btn)btn.disabled=true;
+  try{
+   const signup=authMode==='signup';
+   const r=signup?await sb.auth.signUp({email,password:pw,options:{data:{display_name:name}}}):await sb.auth.signInWithPassword({email,password:pw});
+   if(r.error){const m=errMap.find(x=>x[0].test(r.error.message));out.textContent=m?m[1]:r.error.message;console.error(r.error);return}
+   if(signup&&!r.data.session){out.textContent=r.data.user&&r.data.user.identities&&r.data.user.identities.length===0?'ອີເມວນີ້ສະໝັກແລ້ວ — ໃຫ້ກົດ "ເຂົ້າສູ່ລະບົບ"':'ສະໝັກສຳເລັດ! ກະລຸນາກົດລິ້ງຢືນຢັນທີ່ສົ່ງໄປທາງອີເມວ ແລ້ວຄ່ອຍເຂົ້າສູ່ລະບົບ';return}
+   out.textContent=signup?'ສະໝັກສະມາຊິກສຳເລັດ':'ເຂົ້າສູ່ລະບົບສຳເລັດ';form.reset();setTimeout(()=>{closeM('login');out.textContent=''},700);
+  }catch(err){out.textContent='ເຊື່ອມຕໍ່ Supabase ບໍ່ໄດ້: '+err.message;console.error(err)}
+  finally{if(btn)btn.disabled=false}
  });
  const sf=document.getElementById('sellerForm');
  if(sf)sf.addEventListener('submit',async e=>{

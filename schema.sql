@@ -1,7 +1,7 @@
 
--- LaoMarket Supabase schema (PostgreSQL)
+-- LaoMarket production Supabase schema (PostgreSQL)
 -- Run in Supabase Dashboard > SQL Editor > New query.
--- Start with a fresh project. Review policies before production launch.
+-- Browser code uses ONLY the Publishable key. Secret/service_role keys stay server-side.
 
 create extension if not exists pgcrypto;
 
@@ -309,10 +309,10 @@ on conflict (key) do nothing;
 
 -- After creating your own user account in Authentication > Users, run this
 -- separately in SQL Editor after replacing the email with your own admin email:
-update public.profiles p
-set role = 'admin'
-from auth.users u
-where p.id = u.id and u.email = 'fahjk2297@gmail.com';
+-- update public.profiles p
+-- set role = 'admin'
+-- from auth.users u
+-- where p.id = u.id and u.email = 'YOUR_ADMIN_EMAIL_HERE';
 
 
 -- Promotions and customer-support knowledge base
@@ -364,3 +364,98 @@ using (is_published = true or public.is_admin());
 drop policy if exists "admin manage FAQs" on public.support_faqs;
 create policy "admin manage FAQs" on public.support_faqs for all
 using (public.is_admin()) with check (public.is_admin());
+
+
+-- =====================================================================
+-- v2: production hardening (safe to re-run)
+-- =====================================================================
+alter table public.profiles add column if not exists email text;
+update public.profiles p set email = u.email from auth.users u where u.id = p.id and p.email is null;
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, display_name, email, role)
+  values (new.id, coalesce(new.raw_user_meta_data->>'display_name',''), new.email, 'customer')
+  on conflict (id) do nothing;
+  return new;
+end; $$;
+
+-- Sellers must not approve their own shop or change its owner.
+create or replace function public.lock_shop_fields()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null and not public.is_admin() then
+    if new.status is distinct from old.status then raise exception 'only admin can change shop status'; end if;
+    if new.owner_id is distinct from old.owner_id then raise exception 'cannot change shop owner'; end if;
+  end if;
+  return new;
+end; $$;
+drop trigger if exists lock_shop_fields on public.shops;
+create trigger lock_shop_fields before update on public.shops
+  for each row execute procedure public.lock_shop_fields();
+
+drop policy if exists "admin insert shops" on public.shops;
+create policy "admin insert shops" on public.shops for insert with check (public.is_admin());
+
+-- Products are public only when their shop is approved.
+drop policy if exists "public read active products" on public.products;
+create policy "public read active products" on public.products for select
+using ((status = 'active' and exists (select 1 from public.shops s where s.id = shop_id and s.status = 'approved'))
+       or public.owns_shop(shop_id) or public.is_admin());
+drop policy if exists "shop owner insert products" on public.products;
+create policy "shop owner insert products" on public.products for insert
+with check (exists (select 1 from public.shops s where s.id = shop_id and s.owner_id = auth.uid() and s.status = 'approved')
+            or public.is_admin());
+
+-- Orders are created ONLY through place_order() (server-side pricing + stock check).
+drop policy if exists "customer create own pending order" on public.orders;
+drop policy if exists "customer add items to own pending order" on public.order_items;
+drop policy if exists "customer create pending payment" on public.payments;
+
+create or replace function public.place_order(
+  p_name text, p_phone text, p_address text, p_method text, p_items jsonb)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid(); it record; pr record; q int;
+  sub bigint := 0; ship bigint := 0; oid uuid; onum text;
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  if exists (select 1 from profiles where id = uid and is_suspended) then raise exception 'account_suspended'; end if;
+  if coalesce(trim(p_name),'') = '' or coalesce(trim(p_phone),'') = '' or coalesce(trim(p_address),'') = '' then
+    raise exception 'missing_fields'; end if;
+  if p_method not in ('cash_on_delivery','bank_transfer','qr_payment') then raise exception 'bad_payment_method'; end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'empty_cart'; end if;
+
+  insert into orders (customer_id, customer_name, phone, shipping_address, subtotal_lak, shipping_lak, total_lak, payment_method)
+  values (uid, trim(p_name), trim(p_phone), trim(p_address), 0, 0, 0, p_method)
+  returning id, order_number into oid, onum;
+
+  for it in select value from jsonb_array_elements(p_items) loop
+    q := (it.value->>'qty')::int;
+    if q is null or q <= 0 or q > 100 then raise exception 'bad_quantity'; end if;
+    select p.* into pr from products p join shops s on s.id = p.shop_id
+      where p.id = (it.value->>'id')::uuid and p.status = 'active' and s.status = 'approved'
+      for update of p;
+    if not found then raise exception 'product_unavailable'; end if;
+    if pr.stock < q then raise exception 'out_of_stock: %', pr.name; end if;
+    update products set stock = stock - q,
+      status = case when stock - q = 0 then 'out_of_stock' else status end,
+      updated_at = now() where id = pr.id;
+    insert into order_items (order_id, product_id, shop_id, product_name, quantity, unit_price_lak, line_total_lak)
+    values (oid, pr.id, pr.shop_id, pr.name, q, pr.price_lak, pr.price_lak * q);
+    sub := sub + pr.price_lak * q;
+  end loop;
+
+  update orders set subtotal_lak = sub, total_lak = sub + ship where id = oid;
+  insert into payments (order_id, customer_id, provider, amount_lak) values (oid, uid, p_method, sub + ship);
+  return onum;
+end; $$;
+revoke all on function public.place_order(text,text,text,text,jsonb) from public, anon;
+grant execute on function public.place_order(text,text,text,text,jsonb) to authenticated;
+
+-- Storefront may read only the public support settings.
+drop policy if exists "public read support settings" on public.platform_settings;
+create policy "public read support settings" on public.platform_settings for select
+using (key in ('support_whatsapp','support_welcome'));

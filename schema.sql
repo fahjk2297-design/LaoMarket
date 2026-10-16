@@ -462,3 +462,60 @@ grant execute on function public.place_order(text,text,text,text,jsonb) to authe
 drop policy if exists "public read support settings" on public.platform_settings;
 create policy "public read support settings" on public.platform_settings for select
 using (key in ('support_whatsapp','support_welcome'));
+
+
+-- =====================================================================
+-- v3: seller center (cost price kept private + server-side product saving)
+-- =====================================================================
+create table if not exists public.product_costs (
+  product_id uuid primary key references public.products(id) on delete cascade,
+  shop_id uuid not null references public.shops(id) on delete cascade,
+  cost_lak bigint not null check (cost_lak >= 0),
+  updated_at timestamptz not null default now()
+);
+alter table public.product_costs enable row level security;
+drop policy if exists "owner or admin read costs" on public.product_costs;
+create policy "owner or admin read costs" on public.product_costs for select
+  using (public.owns_shop(shop_id) or public.is_admin());
+
+create or replace function public.seller_save_product(
+  p_id uuid, p_shop uuid, p_name text, p_category text,
+  p_price bigint, p_cost bigint, p_stock int, p_status text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); pid uuid; st text := p_status;
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  if not exists (select 1 from shops where id = p_shop and owner_id = uid and status = 'approved') then
+    raise exception 'shop_not_approved'; end if;
+  if coalesce(trim(p_name),'') = '' or length(p_name) > 200 then raise exception 'bad_name'; end if;
+  if p_price is null or p_price <= 0 or p_cost is null or p_cost < 0 or p_stock is null or p_stock < 0 then
+    raise exception 'bad_numbers'; end if;
+  if st not in ('active','hidden','draft') then st := 'draft'; end if;
+  if st = 'active' and p_stock = 0 then st := 'out_of_stock'; end if;
+  if p_id is null then
+    insert into products (shop_id, name, category, price_lak, stock, status)
+    values (p_shop, trim(p_name), coalesce(nullif(p_category,''),'Other'), p_price, p_stock, st)
+    returning id into pid;
+  else
+    update products set name = trim(p_name), category = coalesce(nullif(p_category,''),'Other'),
+      price_lak = p_price, stock = p_stock, status = st, updated_at = now()
+    where id = p_id and shop_id = p_shop returning id into pid;
+    if pid is null then raise exception 'product_not_found'; end if;
+  end if;
+  insert into product_costs (product_id, shop_id, cost_lak) values (pid, p_shop, p_cost)
+  on conflict (product_id) do update set cost_lak = excluded.cost_lak, updated_at = now();
+  return pid;
+end; $$;
+
+create or replace function public.seller_delete_product(p_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  delete from products where id = p_id
+    and shop_id in (select id from shops where owner_id = auth.uid());
+end; $$;
+
+revoke all on function public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text) from public, anon;
+grant execute on function public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text) to authenticated;
+revoke all on function public.seller_delete_product(uuid) from public, anon;
+grant execute on function public.seller_delete_product(uuid) to authenticated;

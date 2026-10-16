@@ -372,11 +372,14 @@ using (public.is_admin()) with check (public.is_admin());
 alter table public.profiles add column if not exists email text;
 update public.profiles p set email = u.email from auth.users u where u.id = p.id and p.email is null;
 
+alter table public.profiles add column if not exists address text;
+
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, display_name, email, role)
-  values (new.id, coalesce(new.raw_user_meta_data->>'display_name',''), new.email, 'customer')
+  insert into public.profiles (id, display_name, email, phone, address, role)
+  values (new.id, coalesce(new.raw_user_meta_data->>'display_name',''), new.email,
+          nullif(new.raw_user_meta_data->>'phone',''), nullif(new.raw_user_meta_data->>'address',''), 'customer')
   on conflict (id) do nothing;
   return new;
 end; $$;

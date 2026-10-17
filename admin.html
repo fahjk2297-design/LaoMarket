@@ -190,6 +190,37 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
 
 
 <script>
+async function lmCompress(file,max){
+ const TARGET=600*1024,HARD=1.9*1024*1024;
+ if(!/^image\/(jpeg|png|webp)$/.test(file.type))throw new Error('ຮອງຮັບສະເພາະ JPG, PNG, WebP');
+ if(file.size>40*1024*1024)throw new Error('ໄຟລ໌ໃຫຍ່ເກີນ 40MB');
+ const u=URL.createObjectURL(file);
+ const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('ອ່ານຮູບບໍ່ໄດ້'));i.src=u});
+ URL.revokeObjectURL(u);
+ const W=img.naturalWidth,H=img.naturalHeight;
+ const enc=(d,q)=>new Promise((ok,no)=>{
+  const r=Math.min(1,d/Math.max(W,H)),c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(W*r));c.height=Math.max(1,Math.round(H*r));
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+  c.toBlob(b=>b?ok(b):no(new Error('ແປງຮູບບໍ່ໄດ້')),'image/jpeg',q);
+ });
+ let d=Math.min(max||1280,Math.max(W,H)),blob;
+ for(;;){
+  for(const q of [0.85,0.75,0.65,0.55,0.45]){blob=await enc(d,q);if(blob.size<=TARGET)return blob}
+  if(d<=480)break;
+  d=Math.max(480,Math.round(d*0.8));
+ }
+ if(blob.size<=HARD)return blob;
+ throw new Error('ບີບຮູບໃຫ້ນ້ອຍພໍບໍ່ໄດ້ — ກະລຸນາໃຊ້ຮູບອື່ນ');
+}
+async function lmUpload(sb,uid,file){
+ const blob=await lmCompress(file),id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
+ const path=uid+'/'+id+'.jpg',{error}=await sb.storage.from('product-images').upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});
+ if(error)throw error;
+ return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+}
+</script>
+<script>
 (function(){
 const sb=window.laoMarketSupabase,$=id=>document.getElementById(id);
 function loginMsg(h){let el=$('loginMsg');if(!el){el=document.createElement('div');el.id='loginMsg';el.style.cssText='margin-top:12px;padding:12px;border-radius:10px;background:#fff3f2;color:#a32a25;font-size:14px;line-height:1.6;word-break:break-word';$('loginForm').after(el)}el.innerHTML=h||'';el.style.display=h?'block':'none'}
@@ -226,7 +257,7 @@ async function loadLive(){
  const res=await Promise.all([
   T('profiles','id,display_name,email,phone,is_suspended,created_at'),
   T('shops','id,name,phone,status,created_at,profiles(display_name)'),
-  T('products','id,name,category,price_lak,stock,status,shop_id,shops(name)'),
+  T('products','id,name,category,price_lak,stock,status,image_url,shop_id,shops(name)'),
   T('orders','*'),T('payments','*,orders(order_number)'),T('payout_requests','*,shops(name)'),
   T('affiliate_profiles','id,referral_code,status,profiles(display_name)'),
   T('affiliate_commissions','affiliate_id,amount_lak,status'),
@@ -236,7 +267,7 @@ async function loadLive(){
  const [cu,sh,pr,or,pay,po,af,cm,st,pm]=res.map(r=>r.data||[]);
  db.customers=cu.map(x=>({id:x.id,name:x.display_name||'',email:x.email||'',phone:x.phone||'',status:x.is_suspended?'ระงับ':'ใช้งาน',date:(x.created_at||'').slice(0,10)}));
  db.sellers=sh.map(x=>({id:x.id,name:x.name,owner:x.profiles?.display_name||'',phone:x.phone||'',status:MAP.shop[x.status]||x.status,sales:0}));
- db.products=pr.map(x=>({id:x.id,name:x.name,seller:x.shops?.name||'',cat:x.category,price:Number(x.price_lak),stock:x.stock,status:MAP.prod[x.status]||x.status}));
+ db.products=pr.map(x=>({id:x.id,name:x.name,seller:x.shops?.name||'',cat:x.category,price:Number(x.price_lak),stock:x.stock,status:MAP.prod[x.status]||x.status,image:x.image_url||''}));
  db.orders=or.map(x=>({id:x.order_number,customer:x.customer_name,date:(x.created_at||'').slice(0,10),total:Number(x.total_lak),payment:MAP.pay[x.payment_status]||x.payment_status,status:MAP.order[x.status]||x.status}));
  db.payments=pay.map(x=>({id:x.id,orderId:x.order_id,order:x.orders?.order_number||x.order_id,method:x.provider,amount:Number(x.amount_lak),date:(x.created_at||'').slice(0,10),status:MAP.pay[x.status]||x.status}));
  db.payouts=po.map(x=>({id:x.id,seller:x.shops?.name||x.shop_id,account:x.payout_account_masked||'',amount:Number(x.amount_lak),date:(x.created_at||'').slice(0,10),status:MAP.payout[x.status]||x.status}));
@@ -306,6 +337,57 @@ window.lmEditPromo=id=>{const p=promos.find(x=>x.id===id);if(!p)return;
  $('lm-promo-id').value=p.id;$('lm-promo-title').value=p.title||'';$('lm-promo-desc').value=p.description||'';$('lm-promo-discount').value=p.discount_label||'';$('lm-promo-code').value=p.promo_code||'';$('lm-promo-start').value=(p.starts_at||'').slice(0,10);$('lm-promo-end').value=(p.ends_at||'').slice(0,10);$('lm-promo-active').checked=!!p.is_active;$('lm-promo-form').scrollIntoView({behavior:'smooth',block:'start'})};
 window.lmTogglePromo=id=>{const p=promos.find(x=>x.id===id);if(p)run(sb.from('promotions').update({is_active:!p.is_active,updated_at:new Date().toISOString()}).eq('id',id))};
 window.lmDeletePromo=id=>{if(confirm('ລຶບໂປຣໂມຊັນນີ້ບໍ?'))run(sb.from('promotions').delete().eq('id',id))};
+
+// ---- product modal with image upload (replaces generic form for products) ----
+const pm=document.createElement('div');pm.id='pmodal';pm.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9999;padding:14px';
+const fs='width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #c9d3cc;border-radius:8px;font:inherit;margin:4px 0 10px;background:#fff;color:#1b2a22';
+pm.innerHTML=`<div style="background:#fff;color:#1b2a22;border-radius:14px;padding:18px;width:100%;max-width:520px;max-height:92vh;overflow:auto;font:14px system-ui">
+<h3 id="pm-title" style="margin:0 0 10px"></h3>
+<label>ຊື່ສິນຄ້າ<input id="pm-name" style="${fs}"></label>
+<label>ຮ້ານຄ້າ<select id="pm-shop" style="${fs}"></select></label>
+<label>ໝວດໝູ່<select id="pm-cat" style="${fs}"></select></label>
+<label>ລາຄາຂາຍ (ກີບ)<input id="pm-price" type="number" min="0" step="1" style="${fs}"></label>
+<label>ຈຳນວນສະຕັອກ<input id="pm-stock" type="number" min="0" step="1" style="${fs}"></label>
+<label>ສະຖານະ<select id="pm-status" style="${fs}"></select></label>
+<label>🖼️ ຮູບສິນຄ້າ (JPG / PNG / WebP)<input id="pm-file" type="file" accept="image/jpeg,image/png,image/webp" style="${fs}"></label>
+<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><img id="pm-prev" alt="" style="display:none;width:90px;height:90px;object-fit:cover;border-radius:10px;border:1px solid #c9d3cc"><button type="button" id="pm-rm" hidden>ລຶບຮູບ</button></div>
+<div id="pm-msg" style="color:#a32a25;min-height:18px;margin-bottom:8px"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" id="pm-cancel">ຍົກເລີກ</button><button type="button" id="pm-save" class="primary">ບັນທຶກ</button></div></div>`;
+document.body.appendChild(pm);
+const P=i=>document.getElementById(i);let pmId=null,pmImg='',pmRm=false;
+const okUrl=u=>u&&/^https:\/\//.test(u);
+function pmPrev(u){const im=P('pm-prev');if(okUrl(u)){im.src=u;im.style.display='block'}else{im.removeAttribute('src');im.style.display='none'}P('pm-rm').hidden=!okUrl(u)}
+function pmOpen(p){
+ pmId=p?p.id:null;pmImg=p?(p.image||''):'';pmRm=false;P('pm-file').value='';P('pm-msg').textContent='';
+ P('pm-title').textContent=p?'ແກ້ໄຂສິນຄ້າ':'ເພີ່ມສິນຄ້າ';
+ const sel=P('pm-shop');sel.innerHTML=db.sellers.filter(s=>s.status==='อนุมัติ'||(p&&s.name===p.seller)).map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
+ if(p){const s=db.sellers.find(z=>z.name===p.seller);if(s)sel.value=s.id}sel.disabled=!!p;
+ P('pm-cat').innerHTML=CATS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+ P('pm-status').innerHTML=Object.values(MAP.prod).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+ P('pm-name').value=p?p.name:'';P('pm-cat').value=p?p.cat:CATS[0];P('pm-price').value=p?p.price:'';P('pm-stock').value=p?p.stock:'';P('pm-status').value=p?p.status:'เผยแพร่';
+ pmPrev(pmImg);pm.style.display='flex';
+}
+P('pm-file').addEventListener('change',()=>{const f=P('pm-file').files[0];if(f){pmPrev(URL.createObjectURL(f));pmRm=false}else pmPrev(pmImg)});
+P('pm-rm').onclick=()=>{P('pm-file').value='';pmImg='';pmRm=true;pmPrev('')};
+P('pm-cancel').onclick=()=>{pm.style.display='none'};
+P('pm-save').onclick=async()=>{
+ const msg=P('pm-msg'),btn=P('pm-save'),name=P('pm-name').value.trim(),price=Number(P('pm-price').value),stock=Number(P('pm-stock').value);
+ if(!name){msg.textContent='ກະລຸນາໃສ່ຊື່ສິນຄ້າ';return}
+ if(P('pm-price').value===''||!Number.isInteger(price)||price<0){msg.textContent='ລາຄາຕ້ອງເປັນຈຳນວນເຕັມ ແລະ ບໍ່ຕິດລົບ';return}
+ if(P('pm-stock').value===''||!Number.isInteger(stock)||stock<0){msg.textContent='ສະຕັອກຕ້ອງເປັນຈຳນວນເຕັມ ແລະ ບໍ່ຕິດລົບ';return}
+ if(!pmId&&!P('pm-shop').value){msg.textContent='ຕ້ອງເລືອກຮ້ານຄ້າ';return}
+ btn.disabled=true;msg.textContent='ກຳລັງບັນທຶກ...';
+ const row={name,category:P('pm-cat').value,price_lak:price,stock,status:R.prod[P('pm-status').value]};
+ const f=P('pm-file').files[0];
+ try{if(f){msg.textContent='ກຳລັງອັບໂຫຼດຮູບ...';row.image_url=await lmUpload(sb,me.id,f)}else if(pmRm)row.image_url=null}
+ catch(e){btn.disabled=false;msg.textContent='ອັບໂຫຼດຮູບບໍ່ສຳເລັດ: '+(e.message||e);return}
+ const q=pmId?sb.from('products').update({...row,updated_at:new Date().toISOString()}).eq('id',pmId):sb.from('products').insert({...row,shop_id:P('pm-shop').value});
+ const {error}=await q;btn.disabled=false;
+ if(error){msg.textContent='ບັນທຶກບໍ່ສຳເລັດ: '+error.message;return}
+ pm.style.display='none';await loadLive();toast('ບັນທຶກສິນຄ້າແລ້ວ');
+};
+window.openProductForm=()=>{if(!db.sellers.some(s=>s.status==='อนุมัติ')){toast('ຕ້ອງມີຮ້ານທີ່ອະນຸມັດແລ້ວກ່ອນ');return}pmOpen(null)};
+window.editProduct=id=>{const p=db.products.find(x=>x.id===id);if(p)pmOpen(p)};
 
 guard();
 })();

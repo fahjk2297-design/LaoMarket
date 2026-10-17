@@ -519,3 +519,64 @@ revoke all on function public.seller_save_product(uuid,uuid,text,text,bigint,big
 grant execute on function public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text) to authenticated;
 revoke all on function public.seller_delete_product(uuid) from public, anon;
 grant execute on function public.seller_delete_product(uuid) to authenticated;
+
+
+-- =====================================================================
+-- v4: product images (Supabase Storage) + image support in seller_save_product
+-- =====================================================================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('product-images', 'product-images', true, 2097152, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update
+  set public = true, file_size_limit = 2097152, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "product images public read" on storage.objects;
+create policy "product images public read" on storage.objects for select
+  using (bucket_id = 'product-images');
+
+drop policy if exists "product images seller upload" on storage.objects;
+create policy "product images seller upload" on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'product-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+    and (public.is_admin() or exists (select 1 from public.shops s where s.owner_id = auth.uid() and s.status = 'approved'))
+  );
+
+drop policy if exists "product images owner delete" on storage.objects;
+create policy "product images owner delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'product-images' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin()));
+
+drop function if exists public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text);
+create or replace function public.seller_save_product(
+  p_id uuid, p_shop uuid, p_name text, p_category text,
+  p_price bigint, p_cost bigint, p_stock int, p_status text, p_image text default null)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); pid uuid; st text := p_status;
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  if not exists (select 1 from shops where id = p_shop and owner_id = uid and status = 'approved') then
+    raise exception 'shop_not_approved'; end if;
+  if coalesce(trim(p_name),'') = '' or length(p_name) > 200 then raise exception 'bad_name'; end if;
+  if p_price is null or p_price <= 0 or p_cost is null or p_cost < 0 or p_stock is null or p_stock < 0 then
+    raise exception 'bad_numbers'; end if;
+  -- image: null = keep, '' = remove, otherwise must be a public product-images URL inside the caller's own folder
+  if p_image is not null and p_image <> '' and position('/storage/v1/object/public/product-images/' || uid::text || '/' in p_image) = 0 then
+    raise exception 'bad_image'; end if;
+  if st not in ('active','hidden','draft') then st := 'draft'; end if;
+  if st = 'active' and p_stock = 0 then st := 'out_of_stock'; end if;
+  if p_id is null then
+    insert into products (shop_id, name, category, price_lak, stock, status, image_url)
+    values (p_shop, trim(p_name), coalesce(nullif(p_category,''),'Other'), p_price, p_stock, st, nullif(p_image,''))
+    returning id into pid;
+  else
+    update products set name = trim(p_name), category = coalesce(nullif(p_category,''),'Other'),
+      price_lak = p_price, stock = p_stock, status = st, updated_at = now(),
+      image_url = case when p_image is null then image_url else nullif(p_image,'') end
+    where id = p_id and shop_id = p_shop returning id into pid;
+    if pid is null then raise exception 'product_not_found'; end if;
+  end if;
+  insert into product_costs (product_id, shop_id, cost_lak) values (pid, p_shop, p_cost)
+  on conflict (product_id) do update set cost_lak = excluded.cost_lak, updated_at = now();
+  return pid;
+end; $$;
+revoke all on function public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text,text) from public, anon;
+grant execute on function public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text,text) to authenticated;

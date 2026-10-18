@@ -6,6 +6,7 @@
 <style>
 :root{--g:#087f5b;--dark:#064e3b;--bg:#f4f8f5;--line:#e1e9e4}*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:#18241e}button,input,select,textarea{font:inherit}button{cursor:pointer}.top{background:var(--dark);color:white;padding:9px 5%;font-size:13px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}header{background:white;position:sticky;top:0;border-bottom:1px solid var(--line);z-index:5}.head{max-width:1150px;margin:auto;padding:14px 18px;display:flex;align-items:center;gap:16px}.logo{font-size:24px;font-weight:850;color:var(--g);white-space:nowrap}.logo span{color:#f59e0b}.search{display:flex;flex:1}.search input{width:100%;min-width:80px;padding:11px;border:1px solid #ccd9d1;border-radius:9px 0 0 9px}.search button,.primary{background:var(--g);color:white;border:1px solid var(--g)}button{border-radius:9px;padding:10px 13px;border:1px solid var(--line);background:white}.hero,.wrap{max-width:1150px;margin:22px auto;padding:0 18px}.hero-box{border-radius:20px;background:linear-gradient(115deg,#064e3b,#0b9b6c);color:white;padding:34px;display:flex;justify-content:space-between;align-items:center;gap:18px}.hero h1{font-size:clamp(28px,4vw,44px);line-height:1.15;margin:12px 0}.hero p{line-height:1.7;color:#d7f5e6;max-width:570px}.hero-art{font-size:85px}.pill{background:#ffffff22;padding:6px 11px;border-radius:30px;font-size:13px}.section{display:flex;justify-content:space-between;align-items:center;margin:25px 0 14px;gap:12px}.section h2{margin:0;font-size:22px}.muted,.small{color:#6b7770;font-size:13px}.cats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.cat{background:white;border:1px solid var(--line);border-radius:13px;text-align:center;padding:15px 5px;font-weight:650}.cat span{display:block;font-size:28px;margin-bottom:7px}.products{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.product{background:white;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}.pic{overflow:hidden;height:145px;background:#eaf4ed;display:grid;place-items:center;font-size:58px}.pbody{padding:13px;display:flex;flex-direction:column;gap:8px;flex:1}.pname{font-weight:700}.price{font-size:18px;color:var(--g);font-weight:850}.pfoot{display:flex;gap:6px;margin-top:auto}.pfoot button{flex:1;padding:8px 5px;font-size:13px}.panel{background:white;border:1px solid var(--line);border-radius:15px;padding:19px;margin-top:22px}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.feature{background:#f7faf8;border:1px solid var(--line);padding:15px;border-radius:12px}.feature .emoji{font-size:26px}.footer{background:#073b2e;color:#d9eee5;padding:28px 20px;margin-top:28px}.footerin{max-width:1150px;margin:auto;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}.modalbg{display:none;position:fixed;inset:0;background:#10231dbb;z-index:20;align-items:center;justify-content:center;padding:16px}.modalbg.open{display:flex}.modal{background:white;border-radius:16px;padding:21px;width:min(520px,100%);max-height:90vh;overflow:auto}.mhead{display:flex;justify-content:space-between;align-items:center;gap:8px}.mhead h2{margin:0;font-size:21px}.field{display:grid;gap:6px;margin:12px 0}.field label{font-weight:650;font-size:14px}.field input,.field select,.field textarea{border:1px solid #ccd9d1;border-radius:8px;padding:10px;width:100%}.notice{background:#fff5dc;color:#755000;padding:11px;border-radius:9px;font-size:13px;line-height:1.6;margin:12px 0}.row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.toast{display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#14281e;color:white;padding:12px 18px;border-radius:10px;z-index:30;max-width:90%}@media(max-width:800px){.head{flex-wrap:wrap}.search{order:3;flex-basis:100%}.hero-art{display:none}.cats{grid-template-columns:repeat(3,1fr)}.products{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:1fr}}@media(max-width:430px){.hero-box{padding:22px}.hero,.wrap{padding-left:12px;padding-right:12px}.head{padding:12px}.logo{font-size:21px}.cats{gap:7px}.cat{font-size:12px}.pic{height:110px;font-size:48px}.pbody{padding:9px}.pfoot{flex-direction:column}}
 #userPill{background:#e8f5ee;color:#087f5b;font-weight:700;border-radius:99px;padding:8px 14px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+#trackBtn{background:#fff;border:2px solid #1a73e8;color:#1a73e8;font-weight:700;border-radius:10px;padding:8px 14px;cursor:pointer}
 #logoutBtn{background:#fff;border:2px solid #e5484d;color:#e5484d;font-weight:700;border-radius:10px;padding:8px 14px;cursor:pointer}
 #logoutBtn:hover{background:#e5484d;color:#fff}
 </style><meta name="laomarket-api" content="supabase">
@@ -26,7 +27,7 @@
 </script>
 <body>
 <div class="top">🇱🇦 ตลาดออนไลน์สำหรับทุกคนในลาว <span>สกุลเงิน: กีบลาว (LAK)</span></div>
-<header><div class="head"><div class="logo">Lao<span>Market</span></div><form id="searchForm" class="search"><input id="search" placeholder="ค้นหาสินค้า..."><button>ค้นหา</button></form><button id="cartBtn">🛒 ตะกร้า (<span id="count">0</span>)</button><button class="primary" id="loginBtn" onclick="openM('login')">เข้าสู่ระบบ</button><span id="userPill" hidden></span><button id="logoutBtn" hidden>ออกจากระบบ</button></div></header>
+<header><div class="head"><div class="logo">Lao<span>Market</span></div><form id="searchForm" class="search"><input id="search" placeholder="ค้นหาสินค้า..."><button>ค้นหา</button></form><button id="cartBtn">🛒 ตะกร้า (<span id="count">0</span>)</button><button class="primary" id="loginBtn" onclick="openM('login')">เข้าสู่ระบบ</button><button id="trackBtn" hidden onclick="openTrack()">📦 ຕິດຕາມອໍເດີ</button><span id="userPill" hidden></span><button id="logoutBtn" hidden>ออกจากระบบ</button></div></header>
 <section class="hero"><div class="hero-box"><div><span class="pill">ช้อปง่าย • ขายสะดวก • เติบโตไปด้วยกัน</span><h1>ตลาดออนไลน์<br>ของคนลาว 🇱🇦</h1><p>ค้นพบสินค้าจากร้านค้าหลากหลายแห่ง เลือกซื้อสินค้า และเริ่มต้นร้านค้าออนไลน์ของคุณได้ในที่เดียว</p><button onclick="document.getElementById('productSection').scrollIntoView({behavior:'smooth'})">เลือกซื้อสินค้า ↓</button> <button onclick="openM('seller')">เริ่มขายสินค้า</button></div><div class="hero-art">🛍️📦</div></div></section>
 <main class="wrap"><div class="section"><h2>เลือกตามหมวดหมู่</h2><span class="muted">หมวดหมู่ยอดนิยม</span></div><div class="cats">
 <button class="cat" data-cat="อิเล็กทรอนิกส์"><span>📱</span>อิเล็กทรอนิกส์</button><button class="cat" data-cat="แฟชั่น"><span>👕</span>แฟชั่น</button><button class="cat" data-cat="บ้านและสวน"><span>🏡</span>บ้านและสวน</button><button class="cat" data-cat="ความงาม"><span>🧴</span>ความงาม</button><button class="cat" data-cat="อาหาร"><span>☕</span>อาหาร</button><button class="cat" data-cat="อื่น ๆ"><span>🎁</span>อื่น ๆ</button></div>
@@ -95,7 +96,18 @@
 <h4 style="margin:16px 0 6px">🏪 ຂໍ້ມູນຮ້ານຄ້າ</h4><div id="dt-shop" style="border:1px solid var(--line);border-radius:12px;padding:10px 12px"></div>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px"><button type="button" class="primary" id="dt-add">🛒 ໃສ່ຕະກ້າ</button><button type="button" id="dt-more">ເບິ່ງສິນຄ້າອື່ນຂອງຮ້ານນີ້</button></div>
 </div></div>
-<div class="modalbg" id="checkout"><div class="modal"><div class="mhead"><h2>ยืนยันคำสั่งซื้อ ()</h2><button onclick="closeM('checkout')">ปิด ✕</button></div><div class="notice">ไม่มีการตัดเงินจริง กรุณาอย่าโอนเงินจากหน้าทดสอบนี้</div><form id="checkoutForm"><div class="field"><label>ชื่อผู้รับ</label><input required id="buyerName"></div><div class="field"><label>เบอร์โทร</label><input required id="buyerPhone" placeholder="+856..."></div><div class="field"><label>ที่อยู่จัดส่ง</label><textarea required id="buyerAddress" rows="3"></textarea></div><div class="field"><label>วิธีชำระเงิน ()</label><select id="pay"><option>ชำระปลายทาง</option><option>โอนธนาคาร (ยังไม่เชื่อมต่อ)</option><option>QR Payment (ยังไม่เชื่อมต่อ)</option></select></div><button class="primary">สั่งซื้อ</button></form></div></div><div id="toast" class="toast"></div>
+<div class="modalbg" id="track"><div class="modal" style="max-width:720px;width:96%;max-height:92vh;overflow:auto">
+<style>.trc{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.trh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;cursor:pointer}
+.trs{display:flex;margin:14px 0 6px}.trs div{flex:1;text-align:center;font-size:12px;color:#8a948e;position:relative}
+.trs div:before{content:"";display:block;width:22px;height:22px;border-radius:50%;background:#dfe6e1;margin:0 auto 4px;line-height:22px;color:#fff;font-size:12px}
+.trs div.on{color:#087f5b;font-weight:700}.trs div.on:before{background:#0f9d58;content:"✓"}.trs div.cur:before{background:#1a73e8;content:"●"}
+.trb{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;background:#eef2ff;color:#2b4acb}.trb.ok{background:#e8f5ee;color:#087f5b}.trb.bad{background:#fdeceb;color:#c93832}.trb.warn{background:#fff4e0;color:#a15c00}
+.trev{font-size:13px;margin:4px 0;color:#445}.trbox{background:#f6f8f7;border-radius:10px;padding:10px;margin:8px 0;white-space:pre-wrap;font-size:14px}
+.trf .field{margin:6px 0}.trf input{width:100%;box-sizing:border-box}</style>
+<div class="mhead"><h2>📦 ຕິດຕາມອໍເດີຂອງຂ້ອຍ</h2><button type="button" onclick="closeM('track')">ປິດ ✕</button></div>
+<div id="tr-state" class="muted"></div><div id="tr-list"></div>
+</div></div>
+<div class="modalbg" id="checkout"><div class="modal"><div class="mhead"><h2>ยืนยันคำสั่งซื้อ ()</h2><button onclick="closeM('checkout')">ปิด ✕</button></div><div class="notice">ເລືອກ "ໂອນທະນາຄານ / QR" ແລ້ວຫຼັງສັ່ງຊື້ລະບົບຈະສະແດງເລກບັນຊີ ແລະ ໃຫ້ອັບໂຫຼດບິນຊຳລະເງິນ. ຖ້າເລືອກ "ເກັບເງິນປາຍທາງ" ຊຳລະເມື່ອຮັບສິນຄ້າ.</div><form id="checkoutForm"><div class="field"><label>ชื่อผู้รับ</label><input required id="buyerName"></div><div class="field"><label>เบอร์โทร</label><input required id="buyerPhone" placeholder="+856..."></div><div class="field"><label>ที่อยู่จัดส่ง</label><textarea required id="buyerAddress" rows="3"></textarea></div><div class="field"><label>วิธีชำระเงิน ()</label><select id="pay"><option value="cash_on_delivery">ເກັບເງິນປາຍທາງ</option><option value="bank_transfer">ໂອນທະນາຄານ (ອັບໂຫຼດບິນຫຼັງສັ່ງຊື້)</option><option value="qr_payment">QR Payment (ອັບໂຫຼດບິນຫຼັງສັ່ງຊື້)</option></select></div><button class="primary">สั่งซื้อ</button></form></div></div><div id="toast" class="toast"></div>
 <script>
 const defaults=[
 {id:1,name:"หูฟังไร้สาย Bluetooth",price:185000,cat:"อิเล็กทรอนิกส์",emoji:"🎧",seller:"Tech Vientiane"},
@@ -232,10 +244,10 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
  const form=document.getElementById('authForm'),hb=document.querySelector('header button.primary');
  function setBtn(s){
   const lb=document.getElementById('loginBtn'),pill=document.getElementById('userPill'),ob=document.getElementById('logoutBtn');
-  if(!lb||!pill||!ob)return;
-  if(!s){lb.hidden=false;pill.hidden=true;ob.hidden=true;return}
+  const tb=document.getElementById('trackBtn');if(!lb||!pill||!ob)return;
+  if(!s){lb.hidden=false;pill.hidden=true;ob.hidden=true;if(tb)tb.hidden=true;return}
   const m=s.user.user_metadata||{},show=n=>{pill.textContent='👤 '+(n||s.user.email||'');pill.title=s.user.email||'';pill.hidden=false};
-  lb.hidden=true;ob.hidden=false;show(m.display_name);
+  lb.hidden=true;ob.hidden=false;if(tb)tb.hidden=false;show(m.display_name);
   if(!m.display_name)sb.from('profiles').select('display_name').eq('id',s.user.id).single().then(r=>{if(r.data&&r.data.display_name)show(r.data.display_name)});
   [['buyerName',m.display_name],['buyerPhone',m.phone],['buyerAddress',m.address]].forEach(([i,v])=>{const el=document.getElementById(i);if(el&&v&&!el.value)el.value=v});
  }
@@ -306,8 +318,8 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
   e.preventDefault();
   if(!session){closeM('checkout');openM('login');toast('ກະລຸນາເຂົ້າລະບົບກ່ອນສັ່ງຊື້');return}
   if(!cart.length){toast('ຍັງບໍ່ມີສິນຄ້າໃນກະຕ່າ');return}
-  const pv=String(document.getElementById('pay').value||'').toLowerCase(),
-   method=/qr/.test(pv)?'qr_payment':/โอน|bank/.test(pv)?'bank_transfer':'cash_on_delivery',
+  const pv=String(document.getElementById('pay').value||''),
+   method=['bank_transfer','qr_payment'].includes(pv)?pv:'cash_on_delivery',
    btn=form.querySelector('button.primary,button[type=submit]');
   if(btn)btn.disabled=true;
   const {data,error}=await sb.rpc('place_order',{
@@ -318,7 +330,7 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
   if(error){toast(error.message.includes('out_of_stock')?'ສິນຄ້າບໍ່ພໍ: '+(error.message.split(': ')[1]||''):'ສັ່ງຊື້ບໍ່ສຳເລັດ: '+error.message);return}
   cart=[];persist();closeM('checkout');form.reset();
   if(window.lmReload)await window.lmReload();render();
-  toast('ສັ່ງຊື້ສຳເລັດ ເລກທີ '+data);
+  toast('ສັ່ງຊື້ສຳເລັດ ເລກທີ '+data);setTimeout(()=>{if(window.openTrack)window.openTrack(data)},500);
  };
 })();
 </script>
@@ -475,5 +487,93 @@ async function lmUpload(sb,uid,file){
  if(error)throw error;
  return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
 }
+</script>
+
+<script>
+(function(){
+ const sb=window.laoMarketSupabase,$=id=>document.getElementById(id);
+ const fmt=n=>Number(n||0).toLocaleString('en-US')+' ₭';
+ const dt=x=>x?new Date(x).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'';
+ const OST={pending:['ລໍຖ້າດຳເນີນການ',''],confirmed:['ຢືນຢັນແລ້ວ','ok'],processing:['ກຳລັງກະກຽມສິນຄ້າ','ok'],shipped:['ກຳລັງຈັດສົ່ງ','ok'],delivered:['ຈັດສົ່ງສຳເລັດ','ok'],cancelled:['ຍົກເລີກແລ້ວ','bad']};
+ const PST={pending:['ລໍຖ້າຊຳລະ/ກວດສອບ','warn'],confirmed:['ຊຳລະແລ້ວ','ok'],failed:['ການຊຳລະບໍ່ຜ່ານ','bad'],refunded:['ຄືນເງິນແລ້ວ','']};
+ const MTH={cash_on_delivery:'ເກັບເງິນປາຍທາງ',bank_transfer:'ໂອນທະນາຄານ',qr_payment:'QR Payment'};
+ const EVT={created:'ສ້າງອໍເດີ',status_confirmed:'ຢືນຢັນອໍເດີ',status_processing:'ກຳລັງກະກຽມສິນຄ້າ',status_shipped:'ຈັດສົ່ງແລ້ວ',status_delivered:'ຈັດສົ່ງສຳເລັດ',status_cancelled:'ຍົກເລີກອໍເດີ',status_pending:'ລໍຖ້າດຳເນີນການ',payment_confirmed:'ຢືນຢັນການຊຳລະແລ້ວ',payment_failed:'ການຊຳລະບໍ່ຜ່ານ',payment_refunded:'ຄືນເງິນແລ້ວ',payment_pending:'ລໍຖ້າການຊຳລະ',slip_submitted:'ສົ່ງບິນຊຳລະເງິນແລ້ວ',tracking:'ເລກພັດສະດຸ'};
+ const STEPS=[['pending','ສັ່ງຊື້'],['confirmed','ຢືນຢັນ'],['shipped','ກຳລັງຈັດສົ່ງ'],['delivered','ສຳເລັດ']];
+ let uid=null,orders=[],open=null,bank='';
+ async function sha256(b){const h=await crypto.subtle.digest('SHA-256',await b.arrayBuffer());return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+ window.openTrack=async function(focus){
+  if(!sb){toast('ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ Supabase');return}
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){openM('login');toast('ກະລຸນາເຂົ້າລະບົບກ່ອນ');return}
+  uid=session.user.id;open=focus||null;openM('track');await load();
+ };
+ async function load(){
+  $('tr-state').textContent='ກຳລັງໂຫຼດ...';
+  const [o,b]=await Promise.all([
+   sb.from('orders').select('id,order_number,status,payment_method,payment_status,total_lak,created_at,tracking_number,carrier,shipping_address,order_items(product_name,quantity,line_total_lak),payments(id,status,slip_path,slip_submitted_at),order_events(event,note,created_at)').eq('customer_id',uid).order('created_at',{ascending:false}).limit(30),
+   sb.from('platform_settings').select('value').eq('key','bank_info').maybeSingle()]);
+  if(o.error){$('tr-state').textContent='ໂຫຼດບໍ່ໄດ້: '+o.error.message;return}
+  orders=o.data||[];bank=b&&b.data&&b.data.value?String(b.data.value):'';
+  $('tr-state').textContent=orders.length?'':'ທ່ານຍັງບໍ່ມີອໍເດີ';
+  if(!open&&orders[0])open=orders[0].order_number;
+  render();
+ }
+ function steps(o){
+  if(o.status==='cancelled')return '<div class="trb bad" style="margin:8px 0">ອໍເດີນີ້ຖືກຍົກເລີກ</div>';
+  const idx={pending:0,confirmed:1,processing:1,shipped:2,delivered:3}[o.status]??0;
+  return '<div class="trs">'+STEPS.map((s,i)=>`<div class="${i<idx?'on':i===idx?(idx===3?'on':'cur'):''}">${s[1]}</div>`).join('')+'</div>';
+ }
+ function slipBox(o,p){
+  if(o.status==='cancelled'||o.payment_method==='cash_on_delivery'||o.payment_status==='confirmed'||o.payment_status==='refunded')return '';
+  const sent=p&&p.slip_submitted_at;
+  const now=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+  return `<div class="trbox"><b>🏦 ຂໍ້ມູນການໂອນ</b>\n${esc(bank||'ກະລຸນາຕິດຕໍ່ຮ້ານເພື່ອຂໍເລກບັນຊີ')}\n<b>ຍອດທີ່ຕ້ອງໂອນ: ${fmt(o.total_lak)}</b></div>
+  ${sent?`<div class="trb ok">✅ ສົ່ງບິນແລ້ວ ${esc(dt(p.slip_submitted_at))} — ລໍຖ້າແອັດມິນກວດສອບ</div> <button type="button" data-view="${esc(p.slip_path)}">ເບິ່ງບິນທີ່ສົ່ງ</button>`:''}
+  <form class="trf" data-no="${esc(o.order_number)}"><b>${sent?'ສົ່ງບິນໃໝ່ (ຖ້າສົ່ງຜິດ)':'📎 ອັບໂຫຼດບິນຊຳລະເງິນ'}</b>
+  <div class="field"><label>ຮູບບິນ/ສະລິບການໂອນ (JPG, PNG, WebP)</label><input name="file" type="file" accept="image/jpeg,image/png,image/webp"></div>
+  <div class="field"><label>ຈຳນວນເງິນທີ່ໂອນ (ກີບ)</label><input name="amount" type="number" min="1" step="1" value="${o.total_lak}"></div>
+  <div class="field"><label>ເລກອ້າງອີງການໂອນ (ຖ້າມີ)</label><input name="ref" maxlength="60"></div>
+  <div class="field"><label>ວັນເວລາທີ່ໂອນ</label><input name="when" type="datetime-local" value="${now}"></div>
+  <div class="tr-msg" style="min-height:18px;font-weight:600"></div><button type="submit" class="primary">ສົ່ງບິນ</button></form>`;
+ }
+ function detail(o){
+  const p=(o.payments||[])[0],ev=(o.order_events||[]).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const ps=PST[o.payment_status]||[o.payment_status,''];
+  return `${steps(o)}
+  <div style="margin:6px 0">${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity} — ${fmt(i.line_total_lak)}`).join('<br>')}</div>
+  <div style="margin:6px 0">ວິທີຊຳລະ: <b>${esc(MTH[o.payment_method]||o.payment_method)}</b> · <span class="trb ${ps[1]}">${ps[0]}</span></div>
+  <div class="muted" style="margin:6px 0">ສົ່ງໄປ: ${esc(o.shipping_address)}</div>
+  ${o.tracking_number?`<div class="trbox">🚚 ${esc(o.carrier||'')} · ເລກພັດສະດຸ: <b>${esc(o.tracking_number)}</b></div>`:''}
+  ${o.payment_method==='cash_on_delivery'&&o.status!=='cancelled'&&o.payment_status!=='confirmed'?`<div class="trbox">ກະກຽມເງິນ ${fmt(o.total_lak)} ໃຫ້ຜູ້ສົ່ງຕອນຮັບສິນຄ້າ</div>`:''}
+  ${slipBox(o,p)}
+  <div style="margin-top:10px"><b>ປະຫວັດ</b>${ev.map(e=>`<div class="trev">• ${esc(dt(e.created_at))} — ${esc(EVT[e.event]||e.event)}${e.note?': '+esc(e.note):''}</div>`).join('')}</div>
+  ${o.status==='pending'&&o.payment_status==='pending'?`<div style="margin-top:10px"><button type="button" class="danger" data-cancel="${esc(o.order_number)}">ຍົກເລີກອໍເດີ</button></div>`:''}`;
+ }
+ function render(){
+  $('tr-list').innerHTML=orders.map(o=>{const s=OST[o.status]||[o.status,''];
+   return `<div class="trc"><div class="trh" data-toggle="${esc(o.order_number)}"><div><b>${esc(o.order_number)}</b><div class="muted" style="font-size:12px">${esc(dt(o.created_at))}</div></div><div style="text-align:right"><b>${fmt(o.total_lak)}</b><br><span class="trb ${s[1]}">${s[0]}</span></div></div>${open===o.order_number?detail(o):''}</div>`}).join('');
+ }
+ if(sb){
+  $('tr-list').addEventListener('click',async e=>{
+   const tg=e.target.closest('[data-toggle]');if(tg&&!e.target.closest('form')){open=open===tg.dataset.toggle?null:tg.dataset.toggle;render();return}
+   const v=e.target.closest('[data-view]');if(v){const w=window.open('','_blank');const r=await sb.storage.from('payment-slips').createSignedUrl(v.dataset.view,120);if(r.error||!r.data){if(w)w.close();toast('ເປີດບິນບໍ່ໄດ້');return}if(w)w.location=r.data.signedUrl;else toast('ກະລຸນາອະນຸຍາດ pop-up');return}
+   const c=e.target.closest('[data-cancel]');if(c){if(!confirm('ຍົກເລີກອໍເດີນີ້ບໍ?'))return;const r=await sb.rpc('cancel_my_order',{p_order_number:c.dataset.cancel});if(r.error){toast('ຍົກເລີກບໍ່ໄດ້: '+r.error.message);return}toast('ຍົກເລີກອໍເດີແລ້ວ');await load();if(window.lmReload)window.lmReload()}
+  });
+  $('tr-list').addEventListener('submit',async e=>{
+   const f=e.target.closest('form.trf');if(!f)return;e.preventDefault();
+   const no=f.dataset.no,file=f.elements.file.files[0],amount=Number(f.elements.amount.value),ref=f.elements.ref.value.trim(),when=f.elements.when.value,msg=f.querySelector('.tr-msg'),btn=f.querySelector('button[type=submit]');
+   if(!file){msg.textContent='ກະລຸນາເລືອກຮູບບິນ';return}
+   if(!Number.isInteger(amount)||amount<=0){msg.textContent='ກະລຸນາໃສ່ຈຳນວນເງິນທີ່ໂອນ';return}
+   if(!when){msg.textContent='ກະລຸນາໃສ່ວັນເວລາທີ່ໂອນ';return}
+   btn.disabled=true;msg.textContent='ກຳລັງອັບໂຫຼດບິນ...';
+   try{
+    const blob=await lmCompress(file),hash=await sha256(blob),path=uid+'/'+no+'-'+Date.now()+'.jpg';
+    const up=await sb.storage.from('payment-slips').upload(path,blob,{contentType:'image/jpeg',upsert:false});if(up.error)throw up.error;
+    const r=await sb.rpc('submit_payment_slip',{p_order_number:no,p_path:path,p_hash:hash,p_amount:amount,p_ref:ref,p_paid_at:new Date(when).toISOString()});if(r.error)throw r.error;
+    toast('ສົ່ງບິນແລ້ວ ລໍຖ້າແອັດມິນກວດສອບ');open=no;await load();
+   }catch(err){msg.textContent='ສົ່ງບິນບໍ່ສຳເລັດ: '+(err.message||err);btn.disabled=false}
+  });
+ }
+})();
 </script>
 </body></html>

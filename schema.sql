@@ -580,3 +580,188 @@ begin
 end; $$;
 revoke all on function public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text,text) from public, anon;
 grant execute on function public.seller_save_product(uuid,uuid,text,text,bigint,bigint,int,text,text) to authenticated;
+
+
+-- =====================================================================
+-- v5: order records, payment slips (private bucket), preliminary slip checks,
+--     order tracking timeline, customer cancel + automatic restock
+-- =====================================================================
+alter table public.orders
+  add column if not exists carrier text,
+  add column if not exists tracking_number text;
+
+alter table public.payments
+  add column if not exists slip_path text,
+  add column if not exists slip_hash text,
+  add column if not exists declared_amount_lak bigint,
+  add column if not exists transfer_ref text,
+  add column if not exists declared_paid_at timestamptz,
+  add column if not exists slip_submitted_at timestamptz;
+create index if not exists payments_slip_hash_idx on public.payments(slip_hash);
+create index if not exists payments_transfer_ref_idx on public.payments(lower(transfer_ref));
+
+-- Automatic check results: visible to admin only (customers must not see the rules)
+create table if not exists public.payment_checks (
+  payment_id uuid primary key references public.payments(id) on delete cascade,
+  status text not null check (status in ('pass','review','fail')),
+  notes jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.payment_checks enable row level security;
+drop policy if exists "admin read payment checks" on public.payment_checks;
+create policy "admin read payment checks" on public.payment_checks for select using (public.is_admin());
+
+-- Tracking timeline
+create table if not exists public.order_events (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  event text not null,
+  note text,
+  created_at timestamptz not null default now()
+);
+create index if not exists order_events_order_idx on public.order_events(order_id, created_at);
+alter table public.order_events enable row level security;
+drop policy if exists "read own order events or admin" on public.order_events;
+create policy "read own order events or admin" on public.order_events for select
+  using (public.is_admin() or exists (select 1 from public.orders o where o.id = order_id and o.customer_id = auth.uid()));
+
+insert into public.order_events (order_id, event, created_at)
+select o.id, 'created', o.created_at from public.orders o
+where not exists (select 1 from public.order_events e where e.order_id = o.id);
+
+create or replace function public.orders_before_update()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.payment_status = 'confirmed' and old.payment_status is distinct from 'confirmed' and new.status = 'pending' then
+    new.status := 'confirmed';
+  end if;
+  return new;
+end; $$;
+drop trigger if exists orders_before_update on public.orders;
+create trigger orders_before_update before update on public.orders
+  for each row execute procedure public.orders_before_update();
+
+create or replace function public.orders_after_change()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into order_events (order_id, event) values (new.id, 'created');
+    return new;
+  end if;
+  if new.status is distinct from old.status then
+    insert into order_events (order_id, event) values (new.id, 'status_' || new.status);
+    if new.status = 'cancelled' and old.status <> 'cancelled' then
+      update products p set stock = p.stock + i.q,
+             status = case when p.status = 'out_of_stock' then 'active' else p.status end,
+             updated_at = now()
+      from (select product_id, sum(quantity) as q from order_items
+            where order_id = new.id and product_id is not null group by product_id) i
+      where p.id = i.product_id;
+    end if;
+  end if;
+  if new.payment_status is distinct from old.payment_status then
+    insert into order_events (order_id, event) values (new.id, 'payment_' || new.payment_status);
+  end if;
+  if new.tracking_number is distinct from old.tracking_number and new.tracking_number is not null then
+    insert into order_events (order_id, event, note)
+    values (new.id, 'tracking', trim(coalesce(new.carrier,'') || ' ' || new.tracking_number));
+  end if;
+  return new;
+end; $$;
+drop trigger if exists orders_after_change on public.orders;
+create trigger orders_after_change after insert or update on public.orders
+  for each row execute procedure public.orders_after_change();
+
+-- Private bucket for payment slips (owner + admin can read)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('payment-slips', 'payment-slips', false, 3145728, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update
+  set public = false, file_size_limit = 3145728, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "slips owner upload" on storage.objects;
+create policy "slips owner upload" on storage.objects for insert to authenticated
+  with check (bucket_id = 'payment-slips' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "slips owner or admin read" on storage.objects;
+create policy "slips owner or admin read" on storage.objects for select to authenticated
+  using (bucket_id = 'payment-slips' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin()));
+
+-- Customer submits slip -> preliminary automatic checks (admin still confirms)
+create or replace function public.submit_payment_slip(
+  p_order_number text, p_path text, p_hash text, p_amount bigint, p_ref text, p_paid_at timestamptz)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid(); o record; pay record;
+  notes jsonb := '[]'::jsonb; st text := 'pass'; dup int;
+  ref text := nullif(trim(p_ref), '');
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  select * into o from orders where order_number = p_order_number and customer_id = uid;
+  if not found then raise exception 'order_not_found'; end if;
+  if o.payment_method = 'cash_on_delivery' then raise exception 'cod_no_slip'; end if;
+  if o.status = 'cancelled' then raise exception 'order_cancelled'; end if;
+  select * into pay from payments where order_id = o.id order by created_at desc limit 1 for update;
+  if not found then raise exception 'payment_not_found'; end if;
+  if pay.status in ('confirmed','refunded') then raise exception 'already_confirmed'; end if;
+  if p_path is null or position(uid::text || '/' in p_path) <> 1 then raise exception 'bad_slip_path'; end if;
+  if p_hash is null or p_hash !~ '^[0-9a-f]{64}$' then raise exception 'bad_hash'; end if;
+
+  select count(*) into dup from payments where id <> pay.id and slip_hash = p_hash;
+  if dup > 0 then
+    notes := notes || jsonb_build_array(jsonb_build_object('code','duplicate_slip','level','fail','msg','ຮູບບິນນີ້ເຄີຍຖືກໃຊ້ກັບອໍເດີອື່ນ'));
+    st := 'fail';
+  end if;
+  if ref is not null then
+    select count(*) into dup from payments where id <> pay.id and lower(transfer_ref) = lower(ref);
+    if dup > 0 then
+      notes := notes || jsonb_build_array(jsonb_build_object('code','duplicate_ref','level','fail','msg','ເລກອ້າງອີງການໂອນຊ້ຳກັບອໍເດີອື່ນ'));
+      st := 'fail';
+    end if;
+  else
+    notes := notes || jsonb_build_array(jsonb_build_object('code','no_ref','level','info','msg','ບໍ່ໄດ້ໃສ່ເລກອ້າງອີງການໂອນ'));
+  end if;
+  if p_amount is distinct from o.total_lak then
+    notes := notes || jsonb_build_array(jsonb_build_object('code','amount_mismatch','level','review',
+      'msg','ຍອດທີ່ລູກຄ້າແຈ້ງ ' || coalesce(p_amount::text,'-') || ' ບໍ່ກົງກັບຍອດອໍເດີ ' || o.total_lak));
+    if st = 'pass' then st := 'review'; end if;
+  end if;
+  if p_paid_at is null then
+    notes := notes || jsonb_build_array(jsonb_build_object('code','no_time','level','review','msg','ບໍ່ໄດ້ແຈ້ງເວລາໂອນ'));
+    if st = 'pass' then st := 'review'; end if;
+  elsif p_paid_at < o.created_at - interval '10 minutes' then
+    notes := notes || jsonb_build_array(jsonb_build_object('code','paid_before_order','level','review','msg','ເວລາໂອນກ່ອນເວລາສັ່ງຊື້'));
+    if st = 'pass' then st := 'review'; end if;
+  elsif p_paid_at > now() + interval '10 minutes' then
+    notes := notes || jsonb_build_array(jsonb_build_object('code','paid_in_future','level','review','msg','ເວລາໂອນຢູ່ໃນອະນາຄົດ'));
+    if st = 'pass' then st := 'review'; end if;
+  elsif p_paid_at < now() - interval '7 days' then
+    notes := notes || jsonb_build_array(jsonb_build_object('code','paid_too_old','level','review','msg','ເວລາໂອນເກົ່າກວ່າ 7 ວັນ'));
+    if st = 'pass' then st := 'review'; end if;
+  end if;
+
+  update payments set slip_path = p_path, slip_hash = p_hash, declared_amount_lak = p_amount,
+    transfer_ref = ref, declared_paid_at = p_paid_at, slip_submitted_at = now()
+  where id = pay.id;
+  insert into payment_checks (payment_id, status, notes) values (pay.id, st, notes)
+  on conflict (payment_id) do update set status = excluded.status, notes = excluded.notes, created_at = now();
+  insert into order_events (order_id, event) values (o.id, 'slip_submitted');
+  return st;
+end; $$;
+revoke all on function public.submit_payment_slip(text,text,text,bigint,text,timestamptz) from public, anon;
+grant execute on function public.submit_payment_slip(text,text,text,bigint,text,timestamptz) to authenticated;
+
+-- Customer may cancel while unpaid and still pending (stock is restored by trigger)
+create or replace function public.cancel_my_order(p_order_number text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  update orders set status = 'cancelled', updated_at = now()
+  where order_number = p_order_number and customer_id = auth.uid()
+    and status = 'pending' and payment_status = 'pending';
+  if not found then raise exception 'cannot_cancel'; end if;
+end; $$;
+revoke all on function public.cancel_my_order(text) from public, anon;
+grant execute on function public.cancel_my_order(text) to authenticated;
+
+-- Storefront may read the bank transfer info shown on the payment screen
+drop policy if exists "public read support settings" on public.platform_settings;
+create policy "public read support settings" on public.platform_settings for select
+using (key in ('support_whatsapp','support_welcome','bank_info'));

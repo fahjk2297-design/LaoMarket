@@ -262,14 +262,14 @@ async function loadLive(){
   T('affiliate_profiles','id,referral_code,status,profiles(display_name)'),
   T('affiliate_commissions','affiliate_id,amount_lak,status'),
   sb.from('platform_settings').select('key,value'),
-  T('promotions','*')]);
+  T('promotions','*'),sb.from('payment_checks').select('payment_id,status,notes')]);
  res.forEach(r=>r.error&&console.error(r.error));
- const [cu,sh,pr,or,pay,po,af,cm,st,pm]=res.map(r=>r.data||[]);
+ const [cu,sh,pr,or,pay,po,af,cm,st,pm,pc]=res.map(r=>r.data||[]);
  db.customers=cu.map(x=>({id:x.id,name:x.display_name||'',email:x.email||'',phone:x.phone||'',status:x.is_suspended?'ระงับ':'ใช้งาน',date:(x.created_at||'').slice(0,10)}));
  db.sellers=sh.map(x=>({id:x.id,name:x.name,owner:x.profiles?.display_name||'',phone:x.phone||'',status:MAP.shop[x.status]||x.status,sales:0}));
  db.products=pr.map(x=>({id:x.id,name:x.name,seller:x.shops?.name||'',cat:x.category,price:Number(x.price_lak),stock:x.stock,status:MAP.prod[x.status]||x.status,image:x.image_url||''}));
  db.orders=or.map(x=>({id:x.order_number,customer:x.customer_name,date:(x.created_at||'').slice(0,10),total:Number(x.total_lak),payment:MAP.pay[x.payment_status]||x.payment_status,status:MAP.order[x.status]||x.status}));
- db.payments=pay.map(x=>({id:x.id,orderId:x.order_id,order:x.orders?.order_number||x.order_id,method:x.provider,amount:Number(x.amount_lak),date:(x.created_at||'').slice(0,10),status:MAP.pay[x.status]||x.status}));
+ db.payments=pay.map(x=>({id:x.id,orderId:x.order_id,order:x.orders?.order_number||x.order_id,method:x.provider,amount:Number(x.amount_lak),date:(x.created_at||'').slice(0,10),status:MAP.pay[x.status]||x.status,slip:!!x.slip_path,check:pc.find(c=>c.payment_id===x.id)||null}));
  db.payouts=po.map(x=>({id:x.id,seller:x.shops?.name||x.shop_id,account:x.payout_account_masked||'',amount:Number(x.amount_lak),date:(x.created_at||'').slice(0,10),status:MAP.payout[x.status]||x.status}));
  db.affiliates=af.map(x=>({id:x.id,name:x.profiles?.display_name||'',code:x.referral_code,sales:0,commission:cm.filter(c=>c.affiliate_id===x.id&&c.status!=='cancelled').reduce((s,c)=>s+Number(c.amount_lak),0),status:MAP.aff[x.status]||x.status}));
  db.commissions=cm;
@@ -277,7 +277,8 @@ async function loadLive(){
   if(r.key==='affiliate_commission_percent'){$('commissionRate').value=v;localStorage.setItem('lm_commission_rate',v)}
   if(r.key==='platform_fee_percent')$('platformFee').value=v;
   if(r.key==='support_whatsapp')$('lm-wa-number').value=v;
-  if(r.key==='support_welcome')$('lm-welcome').value=v;});
+  if(r.key==='support_welcome')$('lm-welcome').value=v;
+  if(r.key==='bank_info'&&$('lm-bank-info'))$('lm-bank-info').value=v;});
  promos=pm;renderPromos();renderAll();
 }
 
@@ -319,7 +320,7 @@ $('settingsForm').onsubmit=async e=>{e.preventDefault();const now=new Date().toI
 $('lm-support-settings').addEventListener('submit',async e=>{e.preventDefault();
  const n=$('lm-wa-number').value.replace(/\D/g,'');if(n&&n.length<8){alert('ກະລຸນາກວດເບີໂທ ແລະລະຫັດປະເທດ');return}
  const now=new Date().toISOString();
- const {error}=await sb.from('platform_settings').upsert([{key:'support_whatsapp',value:n,updated_by:me.id,updated_at:now},{key:'support_welcome',value:$('lm-welcome').value,updated_by:me.id,updated_at:now}]);
+ const {error}=await sb.from('platform_settings').upsert([{key:'support_whatsapp',value:n,updated_by:me.id,updated_at:now},{key:'support_welcome',value:$('lm-welcome').value,updated_by:me.id,updated_at:now},{key:'bank_info',value:($('lm-bank-info')?$('lm-bank-info').value:''),updated_by:me.id,updated_at:now}]);
  alert(error?error.message:'ບັນທຶກການຕັ້ງຄ່າແລ້ວ')});
 
 const e2=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -337,6 +338,56 @@ window.lmEditPromo=id=>{const p=promos.find(x=>x.id===id);if(!p)return;
  $('lm-promo-id').value=p.id;$('lm-promo-title').value=p.title||'';$('lm-promo-desc').value=p.description||'';$('lm-promo-discount').value=p.discount_label||'';$('lm-promo-code').value=p.promo_code||'';$('lm-promo-start').value=(p.starts_at||'').slice(0,10);$('lm-promo-end').value=(p.ends_at||'').slice(0,10);$('lm-promo-active').checked=!!p.is_active;$('lm-promo-form').scrollIntoView({behavior:'smooth',block:'start'})};
 window.lmTogglePromo=id=>{const p=promos.find(x=>x.id===id);if(p)run(sb.from('promotions').update({is_active:!p.is_active,updated_at:new Date().toISOString()}).eq('id',id))};
 window.lmDeletePromo=id=>{if(confirm('ລຶບໂປຣໂມຊັນນີ້ບໍ?'))run(sb.from('promotions').delete().eq('id',id))};
+
+// ---- orders & payments: detail, slip review (preliminary checks), tracking ----
+const bw=document.createElement('div');bw.className='field';
+bw.innerHTML='<label>🏦 ຂໍ້ມູນບັນຊີຮັບໂອນ (ສະແດງໃຫ້ລູກຄ້າເຫັນຕອນຊຳລະ)</label><textarea id="lm-bank-info" rows="3" style="width:100%;box-sizing:border-box" placeholder="ທະນາຄານ BCEL — ຊື່ບັນຊີ ... — ເລກບັນຊີ ..."></textarea>';
+const sfm=$('lm-support-settings');sfm.insertBefore(bw,sfm.querySelector('button'));
+const METHOD={cash_on_delivery:'ເກັບເງິນປາຍທາງ',bank_transfer:'ໂອນທະນາຄານ',qr_payment:'QR Payment'};
+const CHK={pass:['✅ ບິນຜ່ານເບື້ອງຕົ້ນ','#087f5b','#e8f5ee'],review:['⚠ ຕ້ອງກວດຊ້ຳ','#a15c00','#fff4e0'],fail:['⛔ ສົງໄສ / ຊ້ຳ','#c93832','#fdeceb']};
+const chkBadge=c=>{if(!c||!CHK[c.status])return '';const k=CHK[c.status];return `<div><span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:99px;font-size:12px;color:${k[1]};background:${k[2]}">${k[0]}</span></div>`};
+const EVT={created:'ສ້າງອໍເດີ',status_confirmed:'ຢືນຢັນອໍເດີ',status_processing:'ກຳລັງກະກຽມສິນຄ້າ',status_shipped:'ຈັດສົ່ງແລ້ວ',status_delivered:'ຈັດສົ່ງສຳເລັດ',status_cancelled:'ຍົກເລີກອໍເດີ',status_pending:'ລໍຖ້າດຳເນີນການ',payment_confirmed:'ຢືນຢັນການຊຳລະ',payment_failed:'ການຊຳລະບໍ່ຜ່ານ',payment_refunded:'ຄືນເງິນ',payment_pending:'ລໍຖ້າການຊຳລະ',slip_submitted:'ລູກຄ້າສົ່ງບິນ',tracking:'ເລກພັດສະດຸ'};
+window.renderOrders=()=>{const q=($('orderSearch')?.value||'').toLowerCase(),f=$('orderFilter')?.value||'';
+ rows('orderRows',db.orders.filter(x=>(`${x.id} ${x.customer}`.toLowerCase().includes(q))&&(!f||x.status===f)).map(x=>`<tr><td><b>${esc(x.id)}</b></td><td>${esc(x.customer)}</td><td>${esc(x.date)}</td><td class="money">${money(x.total)}</td><td>${badge(x.payment)}</td><td>${badge(x.status)}</td><td><div class="actions"><button onclick="orderDetail('${esc(x.id)}')">ລາຍລະອຽດ</button><button onclick="changeOrder('${esc(x.id)}')">เปลี่ยนสถานะ</button></div></td></tr>`).join(''))};
+window.renderPayments=()=>{const q=($('paymentSearch')?.value||'').toLowerCase(),f=$('paymentFilter')?.value||'',OK='ยืนยันแล้ว',PD='รอตรวจสอบ';
+ const a=db.payments.filter(x=>(`${x.id} ${x.order} ${x.method}`.toLowerCase().includes(q))&&(!f||x.status===f));
+ $('pCount').textContent=db.payments.length;$('pPaid').textContent=db.payments.filter(x=>x.status===OK).length;$('pPending').textContent=db.payments.filter(x=>x.status===PD).length;
+ $('pAmount').textContent=money(db.payments.filter(x=>x.status===OK).reduce((s,x)=>s+x.amount,0));
+ rows('paymentRows',a.map(x=>`<tr><td><b>${esc(String(x.id).slice(0,8))}</b></td><td>${esc(x.order)}</td><td>${esc(METHOD[x.method]||x.method)}${x.slip?' 🧾':''}</td><td class="money">${money(x.amount)}</td><td>${esc(x.date)}</td><td>${badge(x.status)}${chkBadge(x.check)}</td><td><div class="actions"><button onclick="orderDetail('${esc(x.order)}')">ກວດບິນ</button>${x.status===PD?`<button class="primary" onclick="paymentStatus('${x.id}','ยืนยันแล้ว')">ยืนยัน</button><button class="danger" onclick="paymentStatus('${x.id}','ไม่ผ่าน')">ไม่ผ่าน</button>`:''}</div></td></tr>`).join(''))};
+window.changeOrder=async id=>{const x=db.orders.find(o=>o.id===id);if(!x)return;
+ const ch=['รอชำระเงิน','ชำระแล้ว','กำลังจัดส่ง','สำเร็จ','ยกเลิก'],s=prompt('สถานะใหม่:\n'+ch.join(' / '),x.status);if(!ch.includes(s))return;
+ const upd={status:R.order[s],updated_at:new Date().toISOString()};
+ if(s==='กำลังจัดส่ง'){const c=prompt('ບໍລິສັດຂົນສົ່ງ (ປ່ອຍວ່າງໄດ້)',''),tn=prompt('ເລກພັດສະດຸ / ເລກຕິດຕາມ (ປ່ອຍວ່າງໄດ້)','');if(c&&c.trim())upd.carrier=c.trim();if(tn&&tn.trim())upd.tracking_number=tn.trim()}
+ if(s==='ยกเลิก'&&!confirm('ຍົກເລີກອໍເດີ — ສະຕັອກສິນຄ້າຈະຖືກຄືນອັດຕະໂນມັດ. ຢືນຢັນບໍ?'))return;
+ run(sb.from('orders').update(upd).eq('order_number',id),'ເປີ່ຍນສະຖານະແລ້ວ')};
+const om=document.createElement('div');om.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9998;padding:14px';document.body.appendChild(om);
+const ob=h=>`<div style="background:#fff;color:#1b2a22;border-radius:14px;padding:18px;width:100%;max-width:640px;max-height:92vh;overflow:auto;font:14px/1.5 system-ui">${h}</div>`;
+window.closeOd=()=>{om.style.display='none'};
+window.payAct=async(pid,s,no)=>{await paymentStatus(pid,s);orderDetail(no)};
+window.orderDetail=async no=>{
+ om.style.display='flex';om.innerHTML=ob('ກຳລັງໂຫຼດ...');
+ const r=await sb.from('orders').select('*,order_items(product_name,quantity,unit_price_lak,line_total_lak),payments(*)').eq('order_number',no).single();
+ if(r.error){om.innerHTML=ob('ໂຫຼດບໍ່ໄດ້: '+esc(r.error.message)+'<p><button onclick="closeOd()">ປິດ</button></p>');return}
+ const o=r.data,p=(o.payments||[]).slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+ const [ev,ck]=await Promise.all([sb.from('order_events').select('event,note,created_at').eq('order_id',o.id).order('created_at'),p?sb.from('payment_checks').select('status,notes').eq('payment_id',p.id).maybeSingle():Promise.resolve({data:null})]);
+ let slip='';if(p&&p.slip_path){const s=await sb.storage.from('payment-slips').createSignedUrl(p.slip_path,600);if(s.data&&s.data.signedUrl)slip=`<a href="${esc(s.data.signedUrl)}" target="_blank" rel="noopener"><img src="${esc(s.data.signedUrl)}" alt="slip" style="max-width:100%;max-height:420px;border-radius:10px;border:1px solid #c9d3cc"></a>`}
+ const dt=x=>x?new Date(x).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'—';
+ const c=ck.data,lvl={fail:'#c93832',review:'#a15c00',info:'#667'};
+ om.innerHTML=ob(`<h3 style="margin:0 0 8px">${esc(o.order_number)} ${badge(MAP.order[o.status]||o.status)}</h3>
+ <div><b>${esc(o.customer_name)}</b> · ${esc(o.phone)}<br><span style="color:#556">${esc(o.shipping_address)}</span></div>
+ <div style="margin:10px 0">${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity} — ${money(i.line_total_lak)}`).join('<br>')}<br><b>ລວມ ${money(o.total_lak)}</b></div>
+ <div>ວິທີຊຳລະ: <b>${esc(METHOD[o.payment_method]||o.payment_method)}</b> · ${badge(MAP.pay[o.payment_status]||o.payment_status)}</div>
+ ${p&&p.slip_submitted_at?`<div style="margin:10px 0;padding:10px;border:1px solid #dfe6e1;border-radius:10px"><b>🧾 ບິນທີ່ລູກຄ້າສົ່ງ</b> (${dt(p.slip_submitted_at)})${chkBadge(c)}
+  <div>ຍອດທີ່ແຈ້ງ: ${money(p.declared_amount_lak||0)} · ເວລາໂອນ: ${dt(p.declared_paid_at)} · ເລກອ້າງອີງ: ${esc(p.transfer_ref||'—')}</div>
+  ${(c&&c.notes||[]).map(n=>`<div style="color:${lvl[n.level]||'#667'}">• ${esc(n.msg)}</div>`).join('')||'<div style="color:#087f5b">• ບໍ່ພົບຄວາມຜິດປົກກະຕິຈາກການກວດອັດຕະໂນມັດ</div>'}
+  <div style="margin-top:8px">${slip||'<i>ເປີດຮູບບິນບໍ່ໄດ້</i>'}</div>
+  <div style="font-size:12px;color:#667;margin-top:6px">ການກວດອັດຕະໂນມັດເບື້ອງຕົ້ນບໍ່ໄດ້ຢືນຢັນວ່າເງິນເຂົ້າບັນຊີແທ້ — ກະລຸນາກວດກັບ Statement ຂອງທະນາຄານກ່ອນກົດຢືນຢັນ.</div></div>`:(o.payment_method!=='cash_on_delivery'?'<div style="margin:10px 0;color:#a15c00">ລູກຄ້າຍັງບໍ່ໄດ້ສົ່ງບິນຊຳລະເງິນ</div>':'')}
+ ${o.tracking_number?`<div>🚚 ${esc(o.carrier||'')} · ${esc(o.tracking_number)}</div>`:''}
+ <div style="margin-top:10px"><b>ປະຫວັດ</b>${(ev.data||[]).map(e=>`<div style="font-size:13px">• ${dt(e.created_at)} — ${esc(EVT[e.event]||e.event)}${e.note?': '+esc(e.note):''}</div>`).join('')}</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:14px">
+  ${p&&p.status==='pending'?`<button class="primary" onclick="payAct('${p.id}','ยืนยันแล้ว','${esc(no)}')">✅ ຢືນຢັນການຊຳລະ</button><button class="danger" onclick="payAct('${p.id}','ไม่ผ่าน','${esc(no)}')">❌ ບິນບໍ່ຜ່ານ</button>`:''}
+  <button onclick="closeOd();changeOrder('${esc(no)}')">ປ່ຽນສະຖານະ / ເລກພັດສະດຸ</button><button onclick="closeOd()">ປິດ</button></div>`);
+};
 
 // ---- product modal with image upload (replaces generic form for products) ----
 const pm=document.createElement('div');pm.id='pmodal';pm.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9999;padding:14px';

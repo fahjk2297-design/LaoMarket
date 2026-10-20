@@ -36,7 +36,7 @@
 <section class="panel"><div class="section" style="margin-top:0"><h2>ขายและสร้างรายได้กับ LaoMarket</h2></div><div class="features">
 <div class="feature"><div class="emoji">🏪</div><h3>เปิดร้านค้า</h3><p class="muted">ลงสินค้าและติดตามคำสั่งซื้อ</p><button onclick="openM('seller')">สมัครเป็นผู้ขาย</button></div>
 <div class="feature"><div class="emoji">🔗</div><h3>Affiliate</h3><p class="muted">สร้างลิงก์แนะนำสินค้าใน</p><button onclick="openM('affiliate')">เริ่มแนะนำสินค้า</button></div>
-<div class="feature"><div class="emoji">🏪</div><h3>ຈັດການຮ້ານຄ້າ</h3><p class="muted">ສຳລັບຄົນຢາກຂາຍຂອງ: ເພີ່ມສິນຄ້າ ສະຕັອກ ລາຄາຕົ້ນທຶນ ແລະ ລາຄາຂາຍ</p><button class="primary" onclick="openMyStore()">ເປີດ / ຈັດການຮ້ານຄ້າ</button></div></div></section>
+<div class="feature" id="sellerCard" hidden><div class="emoji">🏪</div><h3>ຈັດການຮ້ານຄ້າ</h3><p class="muted">ສຳລັບຄົນຢາກຂາຍຂອງ: ເພີ່ມສິນຄ້າ ສະຕັອກ ລາຄາຕົ້ນທຶນ ແລະ ລາຄາຂາຍ</p><button class="primary" onclick="openMyStore()">ເປີດ / ຈັດການຮ້ານຄ້າ</button></div></div></section>
 
 <section class="panel" id="lm-promo-section" style="margin:24px auto;background:linear-gradient(120deg,#ecfdf5,#fff7ed);border:1px solid #cde9d9">
   <div class="section" style="margin-top:0"><h2 id="lm-promo-heading">🎉 ໂປຣໂມຊັນພິເສດ</h2><span class="muted" id="lm-promo-sub">ຂໍ້ສະເໜີທີ່ກຳລັງໃຊ້ໄດ້</span></div>
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded',()=>setAuthMode('login'));
   const {data,error}=await sb.from('shops').select('id,name,status').eq('owner_id',uid);
   if(error){$('ms-state').textContent='ໂຫຼດບໍ່ໄດ້: '+error.message;return}
   const shops=data||[];shop=shops.find(s=>s.status==='approved')||shops[0]||null;
-  if(!shop){$('ms-state').innerHTML='ທ່ານຍັງບໍ່ມີຮ້ານຄ້າ. <button type="button" class="primary" onclick="closeM(\'mystore\');openM(\'seller\')">ສະໝັກເປີດຮ້ານ</button>';return}
+  if(!shop){closeM('mystore');toast('ເມນູຈັດການຮ້ານສະເພາະຜູ້ຂາຍທີ່ໄດ້ຮັບອະນຸມັດ — ກະລຸນາສະໝັກເປີດຮ້ານກ່ອນ');openM('seller');return}
   if(shop.status!=='approved'){$('ms-state').textContent='ຮ້ານ "'+shop.name+'" '+(shop.status==='pending'?'ກຳລັງລໍຖ້າ admin ອະນຸມັດ — ອະນຸມັດແລ້ວຈຶ່ງເພີ່ມສິນຄ້າໄດ້':'ຖືກລະງັບ ຫຼື ຖືກປະຖິເສດ — ກະລຸນາຕິດຕໍ່ admin');return}
   $('ms-state').textContent='';$('ms-main').hidden=false;$('ms-shopline').innerHTML='🏪 <b>'+esc(shop.name)+'</b>';
   resetForm();await loadProducts();window.dispatchEvent(new Event('ms-ready'));
@@ -801,6 +801,12 @@ async function lmUpload(sb,uid,file){
 <script>
 (function(){
  const sb=window.laoMarketSupabase;
+ async function refreshSeller(session){
+  const card=document.getElementById('sellerCard');let ok=false;
+  if(sb&&session){const r=await sb.from('shops').select('id,status').eq('owner_id',session.user.id).eq('status','approved').limit(1);ok=!!(r&&r.data&&r.data.some(x=>x.status==='approved'))}
+  window.__isSeller=ok;if(card)card.hidden=!ok;
+ }
+ if(sb){sb.auth.getSession().then(r=>refreshSeller(r.data.session));sb.auth.onAuthStateChange((_e,s)=>{refreshSeller(s)})}
  const menu=document.createElement('div');menu.id='userMenu';menu.hidden=true;document.body.appendChild(menu);
  const SST={pending:['ລໍຖ້າ admin ອະນຸມັດ','warn'],approved:['ເປີດຮ້ານແລ້ວ','ok'],suspended:['ຖືກລະງັບ','bad'],rejected:['ຖືກປະຕິເສດ','bad']};
  const okU=u=>u&&/^https:\/\//.test(u);

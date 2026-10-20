@@ -5,7 +5,8 @@
 <title>LaoMarket | ตลาดออนไลน์ลาว</title>
 <style>
 :root{--g:#087f5b;--dark:#064e3b;--bg:#f4f8f5;--line:#e1e9e4}*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:#18241e}button,input,select,textarea{font:inherit}button{cursor:pointer}.top{background:var(--dark);color:white;padding:9px 5%;font-size:13px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}header{background:white;position:sticky;top:0;border-bottom:1px solid var(--line);z-index:5}.head{max-width:1150px;margin:auto;padding:14px 18px;display:flex;align-items:center;gap:16px}.logo{font-size:24px;font-weight:850;color:var(--g);white-space:nowrap}.logo span{color:#f59e0b}.search{display:flex;flex:1}.search input{width:100%;min-width:80px;padding:11px;border:1px solid #ccd9d1;border-radius:9px 0 0 9px}.search button,.primary{background:var(--g);color:white;border:1px solid var(--g)}button{border-radius:9px;padding:10px 13px;border:1px solid var(--line);background:white}.hero,.wrap{max-width:1150px;margin:22px auto;padding:0 18px}.hero-box{border-radius:20px;background:linear-gradient(115deg,#064e3b,#0b9b6c);color:white;padding:34px;display:flex;justify-content:space-between;align-items:center;gap:18px}.hero h1{font-size:clamp(28px,4vw,44px);line-height:1.15;margin:12px 0}.hero p{line-height:1.7;color:#d7f5e6;max-width:570px}.hero-art{font-size:85px}.pill{background:#ffffff22;padding:6px 11px;border-radius:30px;font-size:13px}.section{display:flex;justify-content:space-between;align-items:center;margin:25px 0 14px;gap:12px}.section h2{margin:0;font-size:22px}.muted,.small{color:#6b7770;font-size:13px}.cats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.cat{background:white;border:1px solid var(--line);border-radius:13px;text-align:center;padding:15px 5px;font-weight:650}.cat span{display:block;font-size:28px;margin-bottom:7px}.products{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.product{background:white;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}.pic{overflow:hidden;height:145px;background:#eaf4ed;display:grid;place-items:center;font-size:58px}.pbody{padding:13px;display:flex;flex-direction:column;gap:8px;flex:1}.pname{font-weight:700}.price{font-size:18px;color:var(--g);font-weight:850}.pfoot{display:flex;gap:6px;margin-top:auto}.pfoot button{flex:1;padding:8px 5px;font-size:13px}.panel{background:white;border:1px solid var(--line);border-radius:15px;padding:19px;margin-top:22px}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.feature{background:#f7faf8;border:1px solid var(--line);padding:15px;border-radius:12px}.feature .emoji{font-size:26px}.footer{background:#073b2e;color:#d9eee5;padding:28px 20px;margin-top:28px}.footerin{max-width:1150px;margin:auto;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}.modalbg{display:none;position:fixed;inset:0;background:#10231dbb;z-index:20;align-items:center;justify-content:center;padding:16px}.modalbg.open{display:flex}.modal{background:white;border-radius:16px;padding:21px;width:min(520px,100%);max-height:90vh;overflow:auto}.mhead{display:flex;justify-content:space-between;align-items:center;gap:8px}.mhead h2{margin:0;font-size:21px}.field{display:grid;gap:6px;margin:12px 0}.field label{font-weight:650;font-size:14px}.field input,.field select,.field textarea{border:1px solid #ccd9d1;border-radius:8px;padding:10px;width:100%}.notice{background:#fff5dc;color:#755000;padding:11px;border-radius:9px;font-size:13px;line-height:1.6;margin:12px 0}.row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.toast{display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#14281e;color:white;padding:12px 18px;border-radius:10px;z-index:30;max-width:90%}@media(max-width:800px){.head{flex-wrap:wrap}.search{order:3;flex-basis:100%}.hero-art{display:none}.cats{grid-template-columns:repeat(3,1fr)}.products{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:1fr}}@media(max-width:430px){.hero-box{padding:22px}.hero,.wrap{padding-left:12px;padding-right:12px}.head{padding:12px}.logo{font-size:21px}.cats{gap:7px}.cat{font-size:12px}.pic{height:110px;font-size:48px}.pbody{padding:9px}.pfoot{flex-direction:column}}
-#userPill{background:#e8f5ee;color:#087f5b;font-weight:700;border-radius:99px;padding:8px 14px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+#userPill{border:0;cursor:pointer;background:#e8f5ee;color:#087f5b;font-weight:700;border-radius:99px;padding:8px 14px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+#userPill:after{content:" ▾"}
 #trackBtn{background:#fff;border:2px solid #1a73e8;color:#1a73e8;font-weight:700;border-radius:10px;padding:8px 14px;cursor:pointer}
 #logoutBtn{background:#fff;border:2px solid #e5484d;color:#e5484d;font-weight:700;border-radius:10px;padding:8px 14px;cursor:pointer}
 #logoutBtn:hover{background:#e5484d;color:#fff}
@@ -27,7 +28,7 @@
 </script>
 <body>
 <div class="top">🇱🇦 ตลาดออนไลน์สำหรับทุกคนในลาว <span>สกุลเงิน: กีบลาว (LAK)</span></div>
-<header><div class="head"><div class="logo">Lao<span>Market</span></div><form id="searchForm" class="search"><input id="search" placeholder="ค้นหาสินค้า..."><button>ค้นหา</button></form><button id="cartBtn">🛒 ตะกร้า (<span id="count">0</span>)</button><button class="primary" id="loginBtn" onclick="openM('login')">เข้าสู่ระบบ</button><button id="trackBtn" hidden onclick="openTrack()">📦 ຕິດຕາມອໍເດີ</button><span id="userPill" hidden></span><button id="logoutBtn" hidden>ออกจากระบบ</button></div></header>
+<header><div class="head"><div class="logo">Lao<span>Market</span></div><form id="searchForm" class="search"><input id="search" placeholder="ค้นหาสินค้า..."><button>ค้นหา</button></form><button id="cartBtn">🛒 ตะกร้า (<span id="count">0</span>)</button><button class="primary" id="loginBtn" onclick="openM('login')">เข้าสู่ระบบ</button><button id="trackBtn" hidden onclick="openTrack()">📦 ຕິດຕາມອໍເດີ</button><button type="button" id="userPill" hidden onclick="toggleUserMenu()" aria-haspopup="true"></button><button id="logoutBtn" hidden>ออกจากระบบ</button></div></header>
 <section class="hero"><div class="hero-box"><div><span class="pill">ช้อปง่าย • ขายสะดวก • เติบโตไปด้วยกัน</span><h1>ตลาดออนไลน์<br>ของคนลาว 🇱🇦</h1><p>ค้นพบสินค้าจากร้านค้าหลากหลายแห่ง เลือกซื้อสินค้า และเริ่มต้นร้านค้าออนไลน์ของคุณได้ในที่เดียว</p><button onclick="document.getElementById('productSection').scrollIntoView({behavior:'smooth'})">เลือกซื้อสินค้า ↓</button> <button onclick="openM('seller')">เริ่มขายสินค้า</button></div><div class="hero-art">🛍️📦</div></div></section>
 <main class="wrap"><div class="section"><h2>เลือกตามหมวดหมู่</h2><span class="muted">หมวดหมู่ยอดนิยม</span></div><div class="cats">
 <button class="cat" data-cat="อิเล็กทรอนิกส์"><span>📱</span>อิเล็กทรอนิกส์</button><button class="cat" data-cat="แฟชั่น"><span>👕</span>แฟชั่น</button><button class="cat" data-cat="บ้านและสวน"><span>🏡</span>บ้านและสวน</button><button class="cat" data-cat="ความงาม"><span>🧴</span>ความงาม</button><button class="cat" data-cat="อาหาร"><span>☕</span>อาหาร</button><button class="cat" data-cat="อื่น ๆ"><span>🎁</span>อื่น ๆ</button></div>
@@ -62,7 +63,10 @@
 <div class="modalbg" id="affiliate"><div class="modal"><div class="mhead"><h2>🔗 สมัคร Affiliate</h2><button onclick="closeM('affiliate')">ปิด ✕</button></div><form id="affForm"><div class="field"><label>ชื่อ</label><input required id="affName"></div><div class="field"><label>อีเมล</label><input required type="email"></div><div class="field"><label>ช่องทางโปรโมต</label><select><option>Facebook</option><option>TikTok</option><option>WhatsApp</option><option>เว็บไซต์</option></select></div><button class="primary">สร้างลิงก์แนะนำสินค้า</button></form><div id="affResult"></div></div></div>
 <div class="modalbg" id="admin"><div class="modal"><div class="mhead"><h2>🛡️ แผงผู้ดูแล ()</h2><button onclick="closeM('admin')">ปิด ✕</button></div><div class="notice">แผงนี้ไม่มีระบบยืนยันสิทธิ์แอดมิน ห้ามใช้จัดการธุรกรรมจริง</div><p>จำนวนสินค้า: <b id="adminCount">0</b> · คำสั่งซื้อ: <b id="orderCount">0</b></p><h3>เพิ่มสินค้า</h3><form id="addForm"><div class="field"><label>ชื่อสินค้า</label><input required id="newName"></div><div class="field"><label>ราคา (กีบ)</label><input required id="newPrice" type="number" min="1"></div><div class="field"><label>หมวดหมู่</label><select id="newCat"><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><div class="field"><label>อีโมจิสินค้า</label><input id="newEmoji" value="🛍️"></div><button class="primary">เพิ่มสินค้า</button></form></div></div>
 <div class="modalbg" id="mystore"><div class="modal" style="max-width:940px;width:96%;max-height:92vh;overflow:auto">
-<style>.mstabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}.mstabs button{padding:9px 12px;border-radius:10px;border:2px solid #cfe3d6;background:#f4faf6;color:#2b4a39;font-weight:700;cursor:pointer}.mstabs button.active{background:linear-gradient(135deg,#0f9d58,#1a73e8);color:#fff;border-color:transparent}
+<style>.msbar{margin:8px 0}.msbar button{width:100%;text-align:left;padding:11px 14px;border-radius:12px;border:2px solid #1a73e8;background:#fff;color:#1a53b0;font-weight:700;font-size:15px;cursor:pointer}.msbar button b{color:#087f5b;margin-left:6px}
+.mstabs{display:flex;flex-direction:column;gap:6px;margin:0 0 12px;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 8px 22px rgba(0,0,0,.12)}
+.mstabs button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid #dfe9e3;background:#f7fbf8;color:#1f3a2b;font-weight:700;cursor:pointer}
+.mstabs button small{font-weight:400;color:#6a7a72;font-size:12px}.mstabs button:hover{background:#eaf6ee}.mstabs button.active{background:linear-gradient(135deg,#0f9d58,#1a73e8);color:#fff;border-color:transparent}.mstabs button.active small{color:#e3f2ff}
 .msgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.msgrid{grid-template-columns:1fr}}
 .msitem{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
 .msitem b{font-size:15px}.msitem .acts{display:flex;gap:6px}.msbadge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:#e8f5ee;color:#087f5b}
@@ -71,7 +75,15 @@
 <div id="ms-state" class="muted"></div>
 <div id="ms-main" hidden>
 <div id="ms-shopline" style="margin-bottom:8px"></div>
-<div id="ms-tabs" class="mstabs"><button type="button" id="ms-t-products" data-tab="products" class="active">📦 ສິນຄ້າ</button><button type="button" id="ms-t-orders" data-tab="orders">🧾 ອໍເດີ / ຈັດສົ່ງ</button><button type="button" id="ms-t-sales" data-tab="sales">📊 ຍອດຂາຍ</button><button type="button" id="ms-t-shop" data-tab="shop">🏪 ຂໍ້ມູນຮ້ານ</button><button type="button" id="ms-t-reviews" data-tab="reviews">⭐ ລີວິວ</button></div>
+<div class="msbar"><button type="button" id="ms-burger" aria-expanded="false" aria-controls="ms-tabs">☰ ເມນູຈັດການຮ້ານ <b id="ms-cur">ສິນຄ້າຂອງຮ້ານ</b></button></div>
+<div id="ms-tabs" class="mstabs" hidden>
+<button type="button" id="ms-t-add" data-tab="products" data-add="1">➕ ເພີ່ມສິນຄ້າໃໝ່<small>ຊື່, ຮູບ, ລາຄາຕົ້ນທຶນ, ລາຄາຂາຍ, ຈຳນວນສະຕັອກ</small></button>
+<button type="button" id="ms-t-products" data-tab="products" class="active">📦 ສິນຄ້າຂອງຮ້ານ<small>ແກ້ໄຂ, ລຶບ, ເບິ່ງສະຕັອກ ແລະ ກຳໄລຕໍ່ຊິ້ນ</small></button>
+<button type="button" id="ms-t-orders" data-tab="orders">🧾 ອໍເດີ / ການຈັດສົ່ງ<small>ຮັບອໍເດີ, ໃສ່ເລກພັດສະດຸ, ສົ່ງຮອດລູກຄ້າ</small></button>
+<button type="button" id="ms-t-sales" data-tab="sales">📊 ຍອດຂາຍ / ຕົ້ນທຶນ / ກຳໄລ<small>ກຣາຟ ແລະ ສະຫຼຸບຕາມຊ່ວງເວລາ</small></button>
+<button type="button" id="ms-t-shop" data-tab="shop">🏪 ຂໍ້ມູນຮ້ານ<small>ຊື່, ລາຍລະອຽດ, ທີ່ຢູ່, ໂລໂກ້</small></button>
+<button type="button" id="ms-t-reviews" data-tab="reviews">⭐ ລີວິວຮ້ານ<small>ດາວສະເລ່ຍ ແລະ ຄຳຕິຊົມຈາກລູກຄ້າ</small></button>
+</div>
 <div id="ms-tab-products">
 <form id="ms-form" novalidate><input type="hidden" id="ms-id">
 <h3 id="ms-title" style="margin:6px 0">➕ ເພີ່ມສິນຄ້າໃໝ່</h3>
@@ -388,7 +400,7 @@ document.addEventListener('DOMContentLoaded',()=>setAuthMode('login'));
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const fmt=n=>Number(n||0).toLocaleString('en-US')+' ₭';
  let shop=null,prods=[],costs={},myUid=null,curImg='',rmImg=false;
- window.openMyStore=async function(){
+ window.openMyStore=async function(tab){window.__msTab=tab||'products';
   if(!sb){toast('ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ Supabase');return}
   const {data:{session}}=await sb.auth.getSession();
   if(!session){openM('login');toast('ກະລຸນາເຂົ້າລະບົບກ່ອນ');return}
@@ -641,10 +653,13 @@ async function lmUpload(sb,uid,file){
  const shop=()=>window.msGetShop&&window.msGetShop();
  const TABS=['products','orders','sales','shop','reviews'];
  let salesDays=30,ordersData=[],ofilter='all';
- function show(t){TABS.forEach(x=>{$('ms-tab-'+x).hidden=x!==t;$('ms-t-'+x).classList.toggle('active',x===t)});
+ function show(t){const lab={products:'ສິນຄ້າຂອງຮ້ານ',orders:'ອໍເດີ / ການຈັດສົ່ງ',sales:'ຍອດຂາຍ / ຕົ້ນທຶນ / ກຳໄລ',shop:'ຂໍ້ມູນຮ້ານ',reviews:'ລີວິວຮ້ານ'};$('ms-cur').textContent=lab[t]||'';TABS.forEach(x=>{$('ms-tab-'+x).hidden=x!==t;$('ms-t-'+x).classList.toggle('active',x===t)});
   if(t==='orders')loadOrders();else if(t==='sales')loadSales(salesDays);else if(t==='shop')fillShop();else if(t==='reviews')loadReviews()}
- $('ms-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)show(b.dataset.tab)});
- window.addEventListener('ms-ready',()=>show('products'));
+ function startAdd(){const c=$('ms-cancel');if(c)c.click();const n=$('ms-name');if(n){n.scrollIntoView({behavior:'smooth',block:'center'});n.focus()}}
+ function menu(open){$('ms-tabs').hidden=!open;$('ms-burger').setAttribute('aria-expanded',open?'true':'false')}
+ $('ms-burger').addEventListener('click',()=>menu($('ms-tabs').hidden));
+ $('ms-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;menu(false);show(b.dataset.tab);if(b.dataset.add)startAdd()});
+ window.addEventListener('ms-ready',()=>{menu(false);const g=window.__msTab||'products';if(g==='add'){show('products');setTimeout(startAdd,50)}else show(g)});
 
  // ---------- orders / fulfillment ----------
  const FST={pending:['ລໍຖ້າຮັບອໍເດີ','warn'],confirmed:['ກຳລັງກະກຽມ',''],shipped:['ກຳລັງຈັດສົ່ງ',''],delivered:['ສົ່ງຮອດແລ້ວ','ok'],cancelled:['ຍົກເລີກ','bad']};
@@ -771,6 +786,63 @@ async function lmUpload(sb,uid,file){
   box.innerHTML=(d&&d.review_count?`<div style="font-size:30px;font-weight:800">${d.avg_rating} <span style="color:#f5a623;font-size:24px">${S(Math.round(d.avg_rating))}</span></div><div class="muted">${d.review_count} ລີວິວ</div>`:'<p class="muted">ຍັງບໍ່ມີລີວິວ. ລູກຄ້າທີ່ໄດ້ຮັບສິນຄ້າແລ້ວຈະໃຫ້ດາວ ແລະ ຂຽນລີວິວໄດ້.</p>')
    +list.map(v=>`<div style="border-top:1px solid var(--line);padding:8px 0"><span style="color:#f5a623">${S(v.rating)}</span> <b>${esc(v.reviewer_name||'ລູກຄ້າ')}</b> <span class="muted" style="font-size:12px">${new Date(v.created_at).toLocaleDateString('en-GB')}</span>${v.comment?`<div style="white-space:pre-wrap">${esc(v.comment)}</div>`:''}</div>`).join('');
  }
+})();
+</script>
+
+<style>
+#userMenu{position:fixed;top:68px;right:12px;width:min(390px,94vw);max-height:82vh;overflow:auto;background:#fff;color:#1b2a22;border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 36px rgba(0,0,0,.2);padding:14px;z-index:90;font-size:14px}
+#userMenu .um-sec{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+#userMenu .um-shop{display:flex;gap:10px;align-items:flex-start}
+#userMenu .um-logo{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#e8f5ee;display:grid;place-items:center;font-size:24px;flex:none}
+#userMenu .um-item{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;margin-top:6px;padding:9px 12px;border-radius:10px;border:1px solid #dfe9e3;background:#f7fbf8;font-weight:700;color:#1f3a2b;cursor:pointer}
+#userMenu .um-item small{font-weight:400;color:#6a7a72;font-size:12px}#userMenu .um-item:hover{background:#eaf6ee}
+#userMenu .um-badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;background:#eef2ff;color:#2b4acb}#userMenu .um-badge.ok{background:#e8f5ee;color:#087f5b}#userMenu .um-badge.bad{background:#fdeceb;color:#c93832}#userMenu .um-badge.warn{background:#fff4e0;color:#a15c00}
+</style>
+<script>
+(function(){
+ const sb=window.laoMarketSupabase;
+ const menu=document.createElement('div');menu.id='userMenu';menu.hidden=true;document.body.appendChild(menu);
+ const SST={pending:['ລໍຖ້າ admin ອະນຸມັດ','warn'],approved:['ເປີດຮ້ານແລ້ວ','ok'],suspended:['ຖືກລະງັບ','bad'],rejected:['ຖືກປະຕິເສດ','bad']};
+ const okU=u=>u&&/^https:\/\//.test(u);
+ const item=(go,t,s)=>`<button type="button" class="um-item" data-go="${go}">${t}<small>${s}</small></button>`;
+ async function render(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){menu.hidden=true;return}
+  const u=session.user,m=u.user_metadata||{};
+  const [pf,sh]=await Promise.all([
+   sb.from('profiles').select('display_name,phone,address').eq('id',u.id).maybeSingle(),
+   sb.from('shops').select('id,name,status,description,category,phone,address,logo_url').eq('owner_id',u.id)]);
+  const p=(pf&&pf.data)||{},shops=(sh&&sh.data)||[],s=shops.find(x=>x.status==='approved')||shops[0]||null;
+  let rate='';
+  if(s){const r=await sb.from('shop_ratings').select('avg_rating,review_count').eq('shop_id',s.id).maybeSingle();const d=r&&r.data;
+   rate=d&&d.review_count?`<span style="color:#f5a623">${'★'.repeat(Math.round(d.avg_rating))}${'☆'.repeat(5-Math.round(d.avg_rating))}</span> <b>${d.avg_rating}</b> (${d.review_count} ລີວິວ)`:'<span class="muted">ຍັງບໍ່ມີລີວິວ</span>'}
+  const st=s?(SST[s.status]||[s.status,'']):null;
+  let h=`<div><b style="font-size:16px">👤 ${esc(p.display_name||m.display_name||u.email)}</b><div class="muted" style="font-size:13px">${esc(u.email||'')}<br>📞 ${esc(p.phone||m.phone||'—')}<br>📍 ${esc(p.address||m.address||'—')}</div></div>`;
+  if(s){
+   h+=`<div class="um-sec"><div class="um-shop">${okU(s.logo_url)?`<img class="um-logo" src="${esc(s.logo_url)}" alt="">`:'<div class="um-logo">🏪</div>'}<div style="min-width:0"><b>${esc(s.name)}</b> <span class="um-badge ${st[1]}">${st[0]}</span><div style="font-size:13px;margin-top:2px">${rate}</div>${s.description?`<div class="muted" style="font-size:13px;margin-top:3px">${esc(s.description.length>110?s.description.slice(0,110)+'…':s.description)}</div>`:'<div class="muted" style="font-size:13px;margin-top:3px">ຍັງບໍ່ໄດ້ໃສ່ລາຍລະອຽດຮ້ານ</div>'}${s.address?`<div class="muted" style="font-size:13px">📍 ${esc(s.address)}</div>`:''}${s.phone?`<div class="muted" style="font-size:13px">📞 ${esc(s.phone)}</div>`:''}</div></div>`;
+   if(s.status==='approved'){
+    h+=item('add','➕ ເພີ່ມສິນຄ້າ','ຊື່, ຮູບ, ຕົ້ນທຶນ, ລາຄາຂາຍ, ສະຕັອກ')+item('products','📦 ສິນຄ້າຂອງຮ້ານ','ແກ້ໄຂ / ລຶບ / ເບິ່ງກຳໄລຕໍ່ຊິ້ນ')+item('orders','🧾 ອໍເດີ / ການຈັດສົ່ງ','ຮັບອໍເດີ, ເລກພັດສະດຸ, ສົ່ງຮອດລູກຄ້າ')+item('sales','📊 ຍອດຂາຍ / ຕົ້ນທຶນ / ກຳໄລ','ກຣາຟ ແລະ ສະຫຼຸບ')+item('shop','🏪 ແກ້ໄຂຂໍ້ມູນຮ້ານ','ຊື່, ລາຍລະອຽດ, ທີ່ຢູ່, ໂລໂກ້')+item('reviews','⭐ ລີວິວຮ້ານ','ດາວ ແລະ ຄຳຕິຊົມຈາກລູກຄ້າ');
+   }else h+=`<div class="muted" style="margin-top:8px;font-size:13px">${s.status==='pending'?'ເມື່ອ admin ອະນຸມັດແລ້ວ ຈະເຫັນເມນູຈັດການຮ້ານຢູ່ບ່ອນນີ້':'ກະລຸນາຕິດຕໍ່ admin'}</div>`;
+   h+='</div>';
+  }else h+=`<div class="um-sec"><div class="muted" style="font-size:13px">ທ່ານຍັງບໍ່ມີຮ້ານຄ້າ</div>${item('apply','🏪 ສະໝັກເປີດຮ້ານ','ເລີ່ມຂາຍສິນຄ້າຂອງທ່ານ')}</div>`;
+  h+=`<div class="um-sec">${item('track','📦 ຕິດຕາມອໍເດີຂອງຂ້ອຍ','ສະຖານະ, ບິນຊຳລະເງິນ, ລີວິວ')}${item('logout','↩ ອອກຈາກລະບົບ','')}</div>`;
+  menu.innerHTML=h;
+ }
+ window.toggleUserMenu=async()=>{
+  if(!sb)return;
+  if(!menu.hidden){menu.hidden=true;return}
+  menu.hidden=false;menu.innerHTML='<div class="muted">ກຳລັງໂຫຼດ...</div>';
+  try{await render()}catch(e){menu.innerHTML='<div class="msbad">ໂຫຼດບໍ່ໄດ້: '+esc(e.message||e)+'</div>'}
+ };
+ document.addEventListener('click',e=>{if(!menu.hidden&&!e.target.closest('#userMenu')&&!e.target.closest('#userPill'))menu.hidden=true});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.hidden=true});
+ menu.addEventListener('click',e=>{
+  const b=e.target.closest('[data-go]');if(!b)return;menu.hidden=true;const g=b.dataset.go;
+  if(g==='logout')document.getElementById('logoutBtn').click();
+  else if(g==='track')openTrack();
+  else if(g==='apply')openM('seller');
+  else openMyStore(g);
+ });
 })();
 </script>
 </body></html>

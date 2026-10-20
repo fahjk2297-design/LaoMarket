@@ -1195,3 +1195,21 @@ begin
 end; $$;
 revoke all on function public.seller_sales_report(uuid,date,date) from public, anon;
 grant execute on function public.seller_sales_report(uuid,date,date) to authenticated;
+
+
+-- =====================================================================
+-- v8: only APPROVED shop owners can manage products (ordinary members cannot)
+-- =====================================================================
+create or replace function public.owns_approved_shop(target uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from shops where id = target and owner_id = auth.uid() and status = 'approved')
+$$;
+
+drop policy if exists "shop owner update products" on public.products;
+create policy "shop owner update products" on public.products for update
+  using (public.owns_approved_shop(shop_id) or public.is_admin())
+  with check (public.owns_approved_shop(shop_id) or public.is_admin());
+
+drop policy if exists "shop owner delete products" on public.products;
+create policy "shop owner delete products" on public.products for delete
+  using (public.owns_approved_shop(shop_id) or public.is_admin());

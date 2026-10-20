@@ -765,3 +765,433 @@ grant execute on function public.cancel_my_order(text) to authenticated;
 drop policy if exists "public read support settings" on public.platform_settings;
 create policy "public read support settings" on public.platform_settings for select
 using (key in ('support_whatsapp','support_welcome','bank_info'));
+
+
+-- =====================================================================
+-- v6: customer notifications (email / WhatsApp outbox) + preferences
+--     Sending is done by the Edge Function `send-notifications` (secrets stay server-side)
+-- =====================================================================
+alter table public.profiles
+  add column if not exists notify_email boolean not null default true,
+  add column if not exists notify_whatsapp boolean not null default true;
+
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  event text not null,
+  channel text not null check (channel in ('email','whatsapp')),
+  recipient text not null,
+  subject text,
+  message text not null,
+  status text not null default 'pending' check (status in ('pending','sending','sent','failed','skipped')),
+  attempts int not null default 0,
+  error text,
+  claimed_at timestamptz,
+  created_at timestamptz not null default now(),
+  sent_at timestamptz
+);
+create index if not exists notifications_queue_idx on public.notifications(status, created_at);
+create index if not exists notifications_order_idx on public.notifications(order_id, created_at);
+alter table public.notifications enable row level security;
+drop policy if exists "admin read notifications" on public.notifications;
+create policy "admin read notifications" on public.notifications for select using (public.is_admin());
+
+create or replace function public.enqueue_order_notification()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare o record; pr record; msg text; subj text; tn text; total text;
+begin
+  if new.event not in ('status_confirmed','status_processing','status_shipped','status_delivered','status_cancelled',
+                       'payment_confirmed','payment_failed','tracking') then
+    return new;
+  end if;
+  select * into o from orders where id = new.order_id;
+  if not found then return new; end if;
+  -- a paid order gets one combined message (payment_confirmed), not two
+  if new.event = 'status_confirmed' and o.payment_status = 'confirmed' then return new; end if;
+  -- avoid a second message when status_shipped and the tracking number are set together
+  if new.event = 'tracking' then
+    if o.status <> 'shipped' then return new; end if;
+    if exists (select 1 from notifications where order_id = o.id and event = 'status_shipped'
+               and created_at > now() - interval '1 minute') then return new; end if;
+  end if;
+  select email, notify_email, notify_whatsapp into pr from profiles where id = o.customer_id;
+  total := to_char(o.total_lak, 'FM999,999,999,999,999');
+  tn := case when o.tracking_number is not null
+        then ' (' || trim(coalesce(o.carrier,'') || ' ເລກພັດສະດຸ ' || o.tracking_number) || ')' else '' end;
+  msg := case new.event
+    when 'status_confirmed'  then 'ອໍເດີ ' || o.order_number || ' ຂອງທ່ານຖືກຢືນຢັນແລ້ວ ຍອດລວມ ' || total || ' ກີບ. ຂອບໃຈທີ່ໃຊ້ LaoMarket.'
+    when 'status_processing' then 'ອໍເດີ ' || o.order_number || ' ກຳລັງກະກຽມສິນຄ້າ.'
+    when 'status_shipped'    then 'ອໍເດີ ' || o.order_number || ' ກຳລັງຈັດສົ່ງ' || tn || '.'
+    when 'tracking'          then 'ອໍເດີ ' || o.order_number || ' ອັບເດດເລກພັດສະດຸ' || tn || '.'
+    when 'status_delivered'  then 'ອໍເດີ ' || o.order_number || ' ຈັດສົ່ງສຳເລັດແລ້ວ. ຂອບໃຈທີ່ໃຊ້ LaoMarket!'
+    when 'status_cancelled'  then 'ອໍເດີ ' || o.order_number || ' ຖືກຍົກເລີກ.'
+    when 'payment_confirmed' then 'ໄດ້ຮັບການຊຳລະເງິນຂອງອໍເດີ ' || o.order_number || ' ແລ້ວ ແລະ ອໍເດີຖືກຢືນຢັນແລ້ວ. ຂອບໃຈທີ່ໃຊ້ LaoMarket!'
+    when 'payment_failed'    then 'ການຊຳລະຂອງອໍເດີ ' || o.order_number || ' ບໍ່ຜ່ານການກວດສອບ ກະລຸນາສົ່ງບິນໃໝ່ ຫຼື ຕິດຕໍ່ຮ້ານ.'
+  end;
+  if msg is null then return new; end if;
+  subj := 'LaoMarket — ອໍເດີ ' || o.order_number;
+  if coalesce(pr.notify_email, true) and coalesce(pr.email,'') <> '' then
+    insert into notifications (order_id, event, channel, recipient, subject, message)
+    values (o.id, new.event, 'email', pr.email, subj, msg);
+  end if;
+  if coalesce(pr.notify_whatsapp, true) and coalesce(o.phone,'') <> '' then
+    insert into notifications (order_id, event, channel, recipient, subject, message)
+    values (o.id, new.event, 'whatsapp', o.phone, null, msg);
+  end if;
+  return new;
+end; $$;
+drop trigger if exists enqueue_order_notification on public.order_events;
+create trigger enqueue_order_notification after insert on public.order_events
+  for each row execute procedure public.enqueue_order_notification();
+
+-- Used only by the Edge Function (service_role): atomically claim a batch
+create or replace function public.claim_notifications(p_limit int default 50)
+returns setof public.notifications language sql security definer set search_path = public as $$
+  update notifications set status = 'sending', claimed_at = now(), attempts = attempts + 1
+  where id in (
+    select id from notifications
+    where status = 'pending' or (status = 'sending' and claimed_at < now() - interval '5 minutes')
+    order by created_at limit greatest(1, least(p_limit, 200))
+    for update skip locked)
+  returning *;
+$$;
+revoke all on function public.claim_notifications(int) from public, anon, authenticated;
+grant execute on function public.claim_notifications(int) to service_role;
+
+-- Customer notification preferences
+create or replace function public.update_my_notify_prefs(p_email boolean, p_whatsapp boolean)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  update profiles set notify_email = coalesce(p_email, notify_email),
+    notify_whatsapp = coalesce(p_whatsapp, notify_whatsapp), updated_at = now()
+  where id = auth.uid();
+end; $$;
+revoke all on function public.update_my_notify_prefs(boolean,boolean) from public, anon;
+grant execute on function public.update_my_notify_prefs(boolean,boolean) to authenticated;
+
+
+-- =====================================================================
+-- v7: shop profile, per-shop fulfillment (seller order management), reviews (stars),
+--     sales report (revenue / cost / profit). Cost price is never exposed to customers.
+-- =====================================================================
+alter table public.shops
+  add column if not exists logo_url text,
+  add column if not exists address text;
+
+-- ---- cost snapshot per order line (private) ----
+create table if not exists public.order_item_costs (
+  order_item_id uuid primary key references public.order_items(id) on delete cascade,
+  shop_id uuid not null references public.shops(id) on delete cascade,
+  unit_cost_lak bigint not null check (unit_cost_lak >= 0)
+);
+alter table public.order_item_costs enable row level security;
+drop policy if exists "owner or admin read item costs" on public.order_item_costs;
+create policy "owner or admin read item costs" on public.order_item_costs for select
+  using (public.owns_shop(shop_id) or public.is_admin());
+
+insert into public.order_item_costs (order_item_id, shop_id, unit_cost_lak)
+select i.id, i.shop_id, c.cost_lak
+from public.order_items i join public.product_costs c on c.product_id = i.product_id
+where i.shop_id is not null
+on conflict (order_item_id) do nothing;
+
+-- ---- per-shop fulfillment ----
+create table if not exists public.shop_orders (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  shop_id uuid not null references public.shops(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','confirmed','shipped','delivered','cancelled')),
+  carrier text,
+  tracking_number text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (order_id, shop_id)
+);
+create index if not exists shop_orders_shop_idx on public.shop_orders(shop_id, created_at desc);
+alter table public.shop_orders enable row level security;
+drop policy if exists "read own shop orders" on public.shop_orders;
+create policy "read own shop orders" on public.shop_orders for select
+  using (public.is_admin() or public.owns_shop(shop_id)
+         or exists (select 1 from public.orders o where o.id = order_id and o.customer_id = auth.uid()));
+
+create or replace function public._ful_rank(s text) returns int language sql immutable as $$
+  select case s when 'pending' then 0 when 'confirmed' then 1 when 'processing' then 1
+                when 'shipped' then 2 when 'delivered' then 3 else -1 end
+$$;
+
+create or replace function public.order_items_after_insert()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.shop_id is not null then
+    insert into shop_orders (order_id, shop_id) values (new.order_id, new.shop_id) on conflict do nothing;
+    insert into order_item_costs (order_item_id, shop_id, unit_cost_lak)
+    select new.id, new.shop_id, c.cost_lak from product_costs c where c.product_id = new.product_id
+    on conflict (order_item_id) do nothing;
+  end if;
+  return new;
+end; $$;
+drop trigger if exists order_items_after_insert on public.order_items;
+create trigger order_items_after_insert after insert on public.order_items
+  for each row execute procedure public.order_items_after_insert();
+
+insert into public.shop_orders (order_id, shop_id, status)
+select distinct i.order_id, i.shop_id,
+  case o.status when 'cancelled' then 'cancelled' when 'delivered' then 'delivered' when 'shipped' then 'shipped'
+                when 'pending' then 'pending' else 'confirmed' end
+from public.order_items i join public.orders o on o.id = i.order_id
+where i.shop_id is not null
+on conflict (order_id, shop_id) do nothing;
+
+-- shop status drives the overall order status (never moves it backwards)
+create or replace function public.shop_orders_after_update()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare o record; tot int; dcnt int; scnt int; ccnt int; newst text; sname text;
+begin
+  select * into o from orders where id = new.order_id;
+  if not found or o.status = 'cancelled' then return new; end if;
+  if new.status is distinct from old.status or new.tracking_number is distinct from old.tracking_number then
+    select name into sname from shops where id = new.shop_id;
+    insert into order_events (order_id, event, note)
+    values (new.order_id, 'shop_' || new.status,
+            trim(coalesce(sname,'') || coalesce(' · ' || nullif(trim(coalesce(new.carrier,'') || ' ' || coalesce(new.tracking_number,'')), ''), '')));
+  end if;
+  select count(*) filter (where status <> 'cancelled'),
+         count(*) filter (where status = 'delivered'),
+         count(*) filter (where status in ('shipped','delivered')),
+         count(*) filter (where status in ('confirmed','shipped','delivered'))
+    into tot, dcnt, scnt, ccnt from shop_orders where order_id = new.order_id;
+  newst := case when tot > 0 and dcnt = tot then 'delivered'
+                when scnt > 0 then 'shipped'
+                when ccnt > 0 then 'confirmed' end;
+  if newst is not null and public._ful_rank(newst) > public._ful_rank(o.status) then
+    update orders set status = newst,
+      carrier = coalesce(carrier, new.carrier),
+      tracking_number = coalesce(tracking_number, new.tracking_number),
+      updated_at = now()
+    where id = o.id;
+  end if;
+  return new;
+end; $$;
+drop trigger if exists shop_orders_after_update on public.shop_orders;
+create trigger shop_orders_after_update after update on public.shop_orders
+  for each row execute procedure public.shop_orders_after_update();
+
+-- order timeline / restock / admin override sync (replaces the v5 version)
+create or replace function public.orders_after_change()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into order_events (order_id, event) values (new.id, 'created');
+    return new;
+  end if;
+  if new.status is distinct from old.status then
+    insert into order_events (order_id, event) values (new.id, 'status_' || new.status);
+    if new.status = 'cancelled' and old.status <> 'cancelled' then
+      update products p set stock = p.stock + i.q,
+             status = case when p.status = 'out_of_stock' then 'active' else p.status end,
+             updated_at = now()
+      from (select product_id, sum(quantity) as q from order_items
+            where order_id = new.id and product_id is not null group by product_id) i
+      where p.id = i.product_id;
+      update shop_orders set status = 'cancelled', updated_at = now()
+      where order_id = new.id and status <> 'cancelled';
+    elsif new.status in ('confirmed','processing','shipped','delivered') then
+      update shop_orders set status = case when new.status = 'processing' then 'confirmed' else new.status end, updated_at = now()
+      where order_id = new.id and status <> 'cancelled'
+        and public._ful_rank(status) < public._ful_rank(new.status);
+    end if;
+  end if;
+  if new.payment_status is distinct from old.payment_status then
+    insert into order_events (order_id, event) values (new.id, 'payment_' || new.payment_status);
+  end if;
+  if new.tracking_number is distinct from old.tracking_number and new.tracking_number is not null then
+    insert into order_events (order_id, event, note)
+    values (new.id, 'tracking', trim(coalesce(new.carrier,'') || ' ' || new.tracking_number));
+  end if;
+  return new;
+end; $$;
+
+-- notifications: one message per shipment for multi-shop orders (replaces the v6 version)
+create or replace function public.enqueue_order_notification()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare o record; pr record; msg text; subj text; tn text; total text; shopcount int;
+begin
+  if new.event not in ('status_confirmed','status_processing','status_shipped','status_delivered','status_cancelled',
+                       'payment_confirmed','payment_failed','tracking','shop_shipped') then
+    return new;
+  end if;
+  select * into o from orders where id = new.order_id;
+  if not found then return new; end if;
+  select count(*) into shopcount from shop_orders where order_id = o.id;
+  if new.event = 'shop_shipped' and shopcount <= 1 then return new; end if;
+  if new.event in ('status_shipped','tracking') and shopcount > 1 then return new; end if;
+  if new.event = 'status_confirmed' and o.payment_status = 'confirmed' then return new; end if;
+  if new.event = 'tracking' then
+    if o.status <> 'shipped' then return new; end if;
+    if exists (select 1 from notifications where order_id = o.id and event = 'status_shipped'
+               and created_at > now() - interval '1 minute') then return new; end if;
+  end if;
+  select email, notify_email, notify_whatsapp into pr from profiles where id = o.customer_id;
+  total := to_char(o.total_lak, 'FM999,999,999,999,999');
+  tn := case when o.tracking_number is not null
+        then ' (' || trim(coalesce(o.carrier,'') || ' ເລກພັດສະດຸ ' || o.tracking_number) || ')' else '' end;
+  msg := case new.event
+    when 'status_confirmed'  then 'ອໍເດີ ' || o.order_number || ' ຂອງທ່ານຖືກຢືນຢັນແລ້ວ ຍອດລວມ ' || total || ' ກີບ. ຂອບໃຈທີ່ໃຊ້ LaoMarket.'
+    when 'status_processing' then 'ອໍເດີ ' || o.order_number || ' ກຳລັງກະກຽມສິນຄ້າ.'
+    when 'status_shipped'    then 'ອໍເດີ ' || o.order_number || ' ກຳລັງຈັດສົ່ງ' || tn || '.'
+    when 'shop_shipped'      then 'ອໍເດີ ' || o.order_number || ': ຮ້ານ ' || coalesce(new.note,'') || ' ຈັດສົ່ງສິນຄ້າແລ້ວ.'
+    when 'tracking'          then 'ອໍເດີ ' || o.order_number || ' ອັບເດດເລກພັດສະດຸ' || tn || '.'
+    when 'status_delivered'  then 'ອໍເດີ ' || o.order_number || ' ຈັດສົ່ງສຳເລັດແລ້ວ. ຂອບໃຈທີ່ໃຊ້ LaoMarket!'
+    when 'status_cancelled'  then 'ອໍເດີ ' || o.order_number || ' ຖືກຍົກເລີກ.'
+    when 'payment_confirmed' then 'ໄດ້ຮັບການຊຳລະເງິນຂອງອໍເດີ ' || o.order_number || ' ແລ້ວ ແລະ ອໍເດີຖືກຢືນຢັນແລ້ວ. ຂອບໃຈທີ່ໃຊ້ LaoMarket!'
+    when 'payment_failed'    then 'ການຊຳລະຂອງອໍເດີ ' || o.order_number || ' ບໍ່ຜ່ານການກວດສອບ ກະລຸນາສົ່ງບິນໃໝ່ ຫຼື ຕິດຕໍ່ຮ້ານ.'
+  end;
+  if msg is null then return new; end if;
+  subj := 'LaoMarket — ອໍເດີ ' || o.order_number;
+  if coalesce(pr.notify_email, true) and coalesce(pr.email,'') <> '' then
+    insert into notifications (order_id, event, channel, recipient, subject, message)
+    values (o.id, new.event, 'email', pr.email, subj, msg);
+  end if;
+  if coalesce(pr.notify_whatsapp, true) and coalesce(o.phone,'') <> '' then
+    insert into notifications (order_id, event, channel, recipient, subject, message)
+    values (o.id, new.event, 'whatsapp', o.phone, null, msg);
+  end if;
+  return new;
+end; $$;
+
+-- seller: orders containing my shop's items (only my items; customer contact is needed to ship)
+create or replace function public.seller_orders(p_shop uuid)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  if not (public.is_admin() or exists (select 1 from shops where id = p_shop and owner_id = auth.uid() and status = 'approved')) then
+    raise exception 'forbidden'; end if;
+  return coalesce((
+    select jsonb_agg(x.r order by x.ts desc) from (
+      select o.created_at as ts, jsonb_build_object(
+        'order_number', o.order_number, 'created_at', o.created_at,
+        'customer_name', o.customer_name, 'phone', o.phone, 'address', o.shipping_address,
+        'payment_method', o.payment_method, 'payment_status', o.payment_status, 'order_status', o.status,
+        'fulfillment', so.status, 'carrier', so.carrier, 'tracking_number', so.tracking_number,
+        'shop_total', (select coalesce(sum(i.line_total_lak),0) from order_items i where i.order_id = o.id and i.shop_id = p_shop),
+        'items', (select coalesce(jsonb_agg(jsonb_build_object('name', i.product_name, 'qty', i.quantity, 'total', i.line_total_lak)), '[]'::jsonb)
+                  from order_items i where i.order_id = o.id and i.shop_id = p_shop)) as r
+      from shop_orders so join orders o on o.id = so.order_id
+      where so.shop_id = p_shop order by o.created_at desc limit 100) x), '[]'::jsonb);
+end; $$;
+
+create or replace function public.seller_update_fulfillment(
+  p_order_number text, p_shop uuid, p_status text, p_carrier text default null, p_tracking text default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); o record; so record;
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  if not exists (select 1 from shops where id = p_shop and owner_id = uid and status = 'approved') then
+    raise exception 'shop_not_approved'; end if;
+  select * into o from orders where order_number = p_order_number;
+  if not found then raise exception 'order_not_found'; end if;
+  select * into so from shop_orders where order_id = o.id and shop_id = p_shop for update;
+  if not found then raise exception 'order_not_found'; end if;
+  if o.status = 'cancelled' or so.status = 'cancelled' then raise exception 'order_cancelled'; end if;
+  if p_status not in ('confirmed','shipped','delivered') then raise exception 'bad_status'; end if;
+  if o.payment_method <> 'cash_on_delivery' and o.payment_status <> 'confirmed' then
+    raise exception 'payment_not_confirmed'; end if;
+  if public._ful_rank(p_status) <> public._ful_rank(so.status) + 1 then raise exception 'invalid_transition'; end if;
+  update shop_orders set status = p_status,
+    carrier = case when p_status = 'shipped' then nullif(left(trim(coalesce(p_carrier,'')), 80), '') else carrier end,
+    tracking_number = case when p_status = 'shipped' then nullif(left(trim(coalesce(p_tracking,'')), 80), '') else tracking_number end,
+    updated_at = now()
+  where id = so.id;
+end; $$;
+revoke all on function public.seller_orders(uuid) from public, anon;
+grant execute on function public.seller_orders(uuid) to authenticated;
+revoke all on function public.seller_update_fulfillment(text,uuid,text,text,text) from public, anon;
+grant execute on function public.seller_update_fulfillment(text,uuid,text,text,text) to authenticated;
+
+-- ---- reviews (stars) : only customers with a delivered order from that shop ----
+create table if not exists public.reviews (
+  id uuid primary key default gen_random_uuid(),
+  shop_id uuid not null references public.shops(id) on delete cascade,
+  customer_id uuid not null references public.profiles(id) on delete cascade,
+  rating int not null check (rating between 1 and 5),
+  comment text check (comment is null or char_length(comment) <= 1000),
+  reviewer_name text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (shop_id, customer_id)
+);
+alter table public.reviews enable row level security;
+drop policy if exists "read own or admin reviews" on public.reviews;
+create policy "read own or admin reviews" on public.reviews for select
+  using (customer_id = auth.uid() or public.is_admin());
+drop policy if exists "admin delete reviews" on public.reviews;
+create policy "admin delete reviews" on public.reviews for delete using (public.is_admin());
+
+create or replace view public.public_reviews as
+  select shop_id, rating, comment, reviewer_name, created_at from public.reviews;
+create or replace view public.shop_ratings as
+  select shop_id, round(avg(rating)::numeric, 1) as avg_rating, count(*)::int as review_count
+  from public.reviews group by shop_id;
+grant select on public.public_reviews, public.shop_ratings to anon, authenticated;
+
+create or replace function public.submit_shop_review(p_shop uuid, p_rating int, p_comment text)
+returns void language plpgsql security definer set search_path = public as $$
+declare uid uuid := auth.uid(); nm text;
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  if p_rating is null or p_rating < 1 or p_rating > 5 then raise exception 'bad_rating'; end if;
+  if exists (select 1 from shops where id = p_shop and owner_id = uid) then raise exception 'own_shop'; end if;
+  if not exists (select 1 from shop_orders so join orders o on o.id = so.order_id
+                 where so.shop_id = p_shop and o.customer_id = uid and so.status = 'delivered') then
+    raise exception 'no_delivered_order'; end if;
+  select coalesce(nullif(split_part(trim(display_name), ' ', 1), ''), 'ລູກຄ້າ') into nm from profiles where id = uid;
+  insert into reviews (shop_id, customer_id, rating, comment, reviewer_name)
+  values (p_shop, uid, p_rating, nullif(left(trim(coalesce(p_comment,'')), 1000), ''), coalesce(nm, 'ລູກຄ້າ'))
+  on conflict (shop_id, customer_id) do update
+    set rating = excluded.rating, comment = excluded.comment, reviewer_name = excluded.reviewer_name, updated_at = now();
+end; $$;
+revoke all on function public.submit_shop_review(uuid,int,text) from public, anon;
+grant execute on function public.submit_shop_review(uuid,int,text) to authenticated;
+
+-- ---- sales report: revenue / cost / profit (counted when paid or delivered) ----
+create or replace function public.seller_sales_report(p_shop uuid, p_from date, p_to date)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare res jsonb; tz text := 'Asia/Vientiane';
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  if not (public.is_admin() or exists (select 1 from shops where id = p_shop and owner_id = auth.uid())) then
+    raise exception 'forbidden'; end if;
+  if p_from is null or p_to is null or p_to < p_from or p_to - p_from > 366 then raise exception 'bad_range'; end if;
+  with base as (
+    select (o.created_at at time zone tz)::date as d, o.id as oid, i.product_name, i.quantity as q,
+           i.line_total_lak as rev, (c.unit_cost_lak * i.quantity) as cost, (c.unit_cost_lak is null) as nocost,
+           (o.payment_status = 'confirmed' or so.status = 'delivered') as realized
+    from order_items i
+    join orders o on o.id = i.order_id
+    join shop_orders so on so.order_id = o.id and so.shop_id = i.shop_id
+    left join order_item_costs c on c.order_item_id = i.id
+    where i.shop_id = p_shop and o.status <> 'cancelled' and so.status <> 'cancelled'
+      and (o.created_at at time zone tz)::date between p_from and p_to),
+  sale as (select * from base where realized)
+  select jsonb_build_object(
+    'totals', jsonb_build_object(
+      'revenue', coalesce((select sum(rev) from sale), 0),
+      'cost', coalesce((select sum(cost) from sale), 0),
+      'profit', coalesce((select sum(rev - coalesce(cost, 0)) from sale), 0),
+      'orders', (select count(distinct oid) from sale),
+      'items', coalesce((select sum(q) from sale), 0),
+      'pending_amount', coalesce((select sum(rev) from base where not realized), 0),
+      'pending_orders', (select count(distinct oid) from base where not realized),
+      'missing_cost', (select count(*) from sale where nocost)),
+    'daily', coalesce((select jsonb_agg(jsonb_build_object('d', d, 'revenue', r, 'cost', c, 'profit', pf, 'orders', n) order by d)
+                       from (select d, sum(rev) r, coalesce(sum(cost), 0) c, sum(rev - coalesce(cost, 0)) pf, count(distinct oid) n
+                             from sale group by d) x), '[]'::jsonb),
+    'products', coalesce((select jsonb_agg(jsonb_build_object('name', n, 'qty', q, 'revenue', r, 'cost', c, 'profit', pf) order by pf desc)
+                          from (select product_name n, sum(q) q, sum(rev) r, coalesce(sum(cost), 0) c, sum(rev - coalesce(cost, 0)) pf
+                                from sale group by product_name order by sum(rev - coalesce(cost, 0)) desc limit 10) y), '[]'::jsonb)
+  ) into res;
+  return res;
+end; $$;
+revoke all on function public.seller_sales_report(uuid,date,date) from public, anon;
+grant execute on function public.seller_sales_report(uuid,date,date) to authenticated;

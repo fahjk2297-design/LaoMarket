@@ -1213,3 +1213,30 @@ create policy "shop owner update products" on public.products for update
 drop policy if exists "shop owner delete products" on public.products;
 create policy "shop owner delete products" on public.products for delete
   using (public.owns_approved_shop(shop_id) or public.is_admin());
+
+
+-- =====================================================================
+-- v9: one email = one account/profile; one open shop application per member
+-- (Sign-up is confirmed with a 6-digit e-mail code; see v10 and README.)
+-- =====================================================================
+do $$
+begin
+  create unique index if not exists profiles_email_unique on public.profiles (lower(email)) where email is not null;
+exception when others then
+  raise notice 'profiles_email_unique not created (duplicate e-mails already exist): %', sqlerrm;
+end $$;
+
+drop policy if exists "seller create own shop" on public.shops;
+create policy "seller create own shop" on public.shops for insert with check (
+  owner_id = auth.uid() and status = 'pending'
+  and not exists (select 1 from public.shops s
+                  where s.owner_id = auth.uid() and s.status in ('pending','approved','suspended'))
+);
+
+
+-- =====================================================================
+-- v10: e-mail verification by 6-digit code at first sign-up (Supabase "Confirm email" = ON)
+--      Removes the earlier auto-confirm safety net so the code is really required.
+-- =====================================================================
+drop trigger if exists auto_confirm_email on auth.users;
+drop function if exists public.auto_confirm_email();

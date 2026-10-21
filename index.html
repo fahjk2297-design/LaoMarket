@@ -48,7 +48,7 @@
 
 <div class="modalbg" id="cart"><div class="modal"><div class="mhead"><h2>🛒 ตะกร้าสินค้า</h2><button onclick="closeM('cart')">ปิด ✕</button></div><div id="cartItems"></div><div id="cartActions"></div></div></div>
 <div class="modalbg" id="login"><div class="modal"><div class="mhead"><h2>เข้าสู่ระบบ / สมัครสมาชิก</h2><button type="button" onclick="closeM('login')">ปิด ✕</button></div>
-<div class="authtabs"><button type="button" id="tabLogin" class="active" onclick="setAuthMode('login')">🔑 เข้าสู่ระบบ</button><button type="button" id="tabSignup" onclick="setAuthMode('signup')">✨ สมัครสมาชิก</button></div>
+<div class="authtabs" id="authTabs"><button type="button" id="tabLogin" class="active" onclick="setAuthMode('login')">🔑 เข้าสู่ระบบ</button><button type="button" id="tabSignup" onclick="setAuthMode('signup')">✨ สมัครสมาชิก</button></div>
 <form id="authForm" novalidate>
 <div id="signupFields" hidden>
 <div class="field"><label>👤 ຊື່ ແລະ ນາມສະກຸນ</label><input id="authName" autocomplete="name" placeholder="ຕົວຢ່າງ: ສົມຊາຍ ວົງສະຫວັນ"></div>
@@ -58,8 +58,14 @@
 <div class="field"><label>✉️ ອີເມວ</label><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
 <div class="field"><label>🔒 ລະຫັດຜ່ານ</label><input id="authPass" type="password" autocomplete="current-password" placeholder="ຢ່າງໜ້ອຍ 6 ຕົວ"></div>
 <div class="field" id="pass2Wrap" hidden><label>🔒 ຢືນຢັນລະຫັດຜ່ານອີກຄັ້ງ</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="ພິມລະຫັດຜ່ານອີກຄັ້ງ"></div>
-<button type="submit" class="primary" id="authSubmit" style="width:100%">เข้าสู่ระบบ</button></form><p id="authStatus" class="muted"></p></div></div>
-<div class="modalbg" id="seller"><div class="modal"><div class="mhead"><h2>🏪 สมัครเปิดร้านค้า</h2><button onclick="closeM('seller')">ปิด ✕</button></div><form id="sellerForm"><div class="field"><label>ชื่อร้าน</label><input required id="shopName"></div><div class="field"><label>ชื่อผู้ติดต่อ</label><input required></div><div class="field"><label>เบอร์โทร</label><input required placeholder="+856..."></div><div class="field"><label>หมวดหมู่</label><select><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><button class="primary">ส่งใบสมัคร</button></form></div></div>
+<button type="submit" class="primary" id="authSubmit" style="width:100%">เข้าสู่ระบบ</button></form>
+<div id="otpBox" hidden>
+<p id="otpInfo" style="margin:10px 0;line-height:1.6"></p>
+<div class="field"><label>🔢 ລະຫັດຢືນຢັນ 6 ຕົວ</label><input id="authOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······" style="letter-spacing:10px;font-size:26px;text-align:center"></div>
+<button type="button" class="primary" id="otpVerify" style="width:100%">ຢືນຢັນອີເມວ</button>
+<div style="display:flex;justify-content:space-between;gap:8px;margin-top:10px"><button type="button" id="otpResend">ສົ່ງລະຫັດອີກຄັ້ງ</button><button type="button" id="otpBack">← ກັບຄືນ</button></div>
+</div><p id="authStatus" class="muted"></p></div></div>
+<div class="modalbg" id="seller"><div class="modal"><div class="mhead"><h2>🏪 สมัครเปิดร้านค้า</h2><button onclick="closeM('seller')">ปิด ✕</button></div><form id="sellerForm"><div class="field"><label>ชื่อร้าน</label><input required id="shopName"></div><div class="field"><label>ชื่อผู้ติดต่อ</label><input required></div><div class="field"><label>เบอร์โทร</label><input required placeholder="+856..."></div><div class="field"><label>หมวดหมู่</label><select><option value="อิเล็กทรอนิกส์">อิเล็กทรอนิกส์</option><option value="แฟชั่น">แฟชั่น</option><option value="บ้านและสวน">บ้านและสวน</option><option value="ความงาม">ความงาม</option><option value="อาหาร">อาหาร</option><option value="อื่น ๆ">อื่น ๆ</option></select></div><button class="primary">ส่งใบสมัคร</button></form></div></div>
 <div class="modalbg" id="affiliate"><div class="modal"><div class="mhead"><h2>🔗 สมัคร Affiliate</h2><button onclick="closeM('affiliate')">ปิด ✕</button></div><form id="affForm"><div class="field"><label>ชื่อ</label><input required id="affName"></div><div class="field"><label>อีเมล</label><input required type="email"></div><div class="field"><label>ช่องทางโปรโมต</label><select><option>Facebook</option><option>TikTok</option><option>WhatsApp</option><option>เว็บไซต์</option></select></div><button class="primary">สร้างลิงก์แนะนำสินค้า</button></form><div id="affResult"></div></div></div>
 <div class="modalbg" id="admin"><div class="modal"><div class="mhead"><h2>🛡️ แผงผู้ดูแล ()</h2><button onclick="closeM('admin')">ปิด ✕</button></div><div class="notice">แผงนี้ไม่มีระบบยืนยันสิทธิ์แอดมิน ห้ามใช้จัดการธุรกรรมจริง</div><p>จำนวนสินค้า: <b id="adminCount">0</b> · คำสั่งซื้อ: <b id="orderCount">0</b></p><h3>เพิ่มสินค้า</h3><form id="addForm"><div class="field"><label>ชื่อสินค้า</label><input required id="newName"></div><div class="field"><label>ราคา (กีบ)</label><input required id="newPrice" type="number" min="1"></div><div class="field"><label>หมวดหมู่</label><select id="newCat"><option>อิเล็กทรอนิกส์</option><option>แฟชั่น</option><option>บ้านและสวน</option><option>ความงาม</option><option>อาหาร</option><option>อื่น ๆ</option></select></div><div class="field"><label>อีโมจิสินค้า</label><input id="newEmoji" value="🛍️"></div><button class="primary">เพิ่มสินค้า</button></form></div></div>
 <div class="modalbg" id="mystore"><div class="modal" style="max-width:940px;width:96%;max-height:92vh;overflow:auto">
@@ -168,8 +174,6 @@ function beginCheckout(){closeM("cart");openM("checkout")}
 document.getElementById("cartBtn").onclick=()=>openM("cart");
 document.getElementById("searchForm").onsubmit=e=>{e.preventDefault();query=document.getElementById("search").value.trim();category="";render();document.getElementById("productSection").scrollIntoView({behavior:"smooth"})};
 document.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{category=category===b.dataset.cat?"":b.dataset.cat;query="";document.getElementById("search").value="";render();document.getElementById("productSection").scrollIntoView({behavior:"smooth"})});
-document.getElementById("sellerForm").onsubmit=e=>{e.preventDefault();let n=document.getElementById("shopName").value;closeM("seller");e.target.reset();toast("บันทึกใบสมัครร้าน "+n+" ในแล้ว")};
-document.getElementById("affForm").onsubmit=e=>{e.preventDefault();let code="LAO"+Math.random().toString(36).slice(2,8).toUpperCase(),url=location.href.split("?")[0]+"?ref="+code;document.getElementById("affResult").innerHTML=`<div class="panel"><b>ลิงก์แนะนำ</b><p style="overflow-wrap:anywhere">${esc(url)}</p><button onclick="copyLink('${url}')">คัดลอกลิงก์</button><p class="small">ยังไม่มีระบบติดตามยอดขายหรือจ่ายค่าคอมมิชชันจริง</p></div>`};
 function copyLink(s){if(navigator.clipboard)navigator.clipboard.writeText(s).then(()=>toast("คัดลอกลิงก์แล้ว")).catch(()=>toast(s));else toast(s)}
 document.getElementById("addForm").onsubmit=e=>{e.preventDefault();products.unshift({id:Date.now(),name:document.getElementById("newName").value,price:Number(document.getElementById("newPrice").value),cat:document.getElementById("newCat").value,emoji:document.getElementById("newEmoji").value||"🛍️",seller:"ร้านแอดมิน"});persist();render();document.getElementById("adminCount").textContent=products.length;e.target.reset();toast("เพิ่มสินค้าในแล้ว")};
 document.getElementById("checkoutForm").onsubmit=e=>{e.preventDefault();let total=cart.reduce((s,x)=>{let p=products.find(y=>y.id===x.id);return s+(p?p.price*x.qty:0)},0);orders.push({id:"LM"+Date.now(),buyer:document.getElementById("buyerName").value,phone:document.getElementById("buyerPhone").value,address:document.getElementById("buyerAddress").value,payment:document.getElementById("pay").value,total,items:cart,created:new Date().toISOString()});cart=[];persist();render();closeM("checkout");e.target.reset();toast("บันทึกคำสั่งซื้อแล้ว รวม "+money(total))};
@@ -288,9 +292,14 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
  sb.auth.getSession().then(r=>setBtn(r.data.session));
  sb.auth.onAuthStateChange((_e,s)=>setBtn(s));
  const errMap=[[/invalid login/i,'ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ'],[/not confirmed/i,'ຍັງບໍ່ໄດ້ຢືນຢັນອີເມວ — ກົດລິ້ງໃນກ່ອງຈົດໝາຍກ່ອນ'],[/already registered|already been registered/i,'ອີເມວນີ້ສະໝັກແລ້ວ — ໃຫ້ກົດ "ເຂົ້າສູ່ລະບົບ"'],[/rate limit/i,'ສົ່ງອີເມວຖີ່ເກີນໄປ — ລໍຖ້າສັກຄູ່ ຫຼື ປິດ Confirm email ໃນ Supabase'],[/password/i,'ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 6 ຕົວ'],[/database error/i,'ຖານຂໍ້ມູນຜິດພາດ — ກວດວ່າຣັນ schema.sql ທັງໄຟລ໌ແລ້ວ']];
+ let pendingEmail='',coolT=null;
+ const $o=id=>document.getElementById(id);
+ function otpView(show){$o('otpBox').hidden=!show;$o('authForm').hidden=show;$o('authTabs').hidden=show}
+ function cooldown(sec){const rb=$o('otpResend');clearInterval(coolT);let s=sec;rb.disabled=true;const tick=()=>{rb.textContent=s>0?'ສົ່ງລະຫັດອີກຄັ້ງ ('+s+')':'ສົ່ງລະຫັດອີກຄັ້ງ';if(s<=0){clearInterval(coolT);rb.disabled=false}s--};tick();coolT=setInterval(tick,1000)}
+ function showOtp(email,note){pendingEmail=email;otpView(true);$o('otpInfo').innerHTML=note+'<br>ລະຫັດ 6 ຕົວຖືກສົ່ງໄປທີ່ <b>'+esc(email)+'</b> (ກວດໃນກ່ອງ Spam ນຳ)';$o('authOtp').value='';$o('authStatus').textContent='';cooldown(60);setTimeout(()=>$o('authOtp').focus(),50)}
  if(form)form.addEventListener('submit',async e=>{
   e.preventDefault();
-  const g=id=>document.getElementById(id).value.trim(),email=g('authEmail'),pw=document.getElementById('authPass').value,
+  const g=id=>document.getElementById(id).value.trim(),email=g('authEmail').toLowerCase(),pw=document.getElementById('authPass').value,
    out=document.getElementById('authStatus'),btn=document.getElementById('authSubmit'),signup=authMode==='signup';
   let meta={};
   if(!/^\S+@\S+\.\S+$/.test(email)){out.textContent='ກະລຸນາໃສ່ອີເມວໃຫ້ຖືກຕ້ອງ';return}
@@ -304,19 +313,57 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
    meta={display_name:name,phone:phone.replace(/[\s-]/g,''),address};
   }
   out.textContent='ກຳລັງດຳເນີນການ...';if(btn)btn.disabled=true;
+  const done=m=>{out.textContent=m;form.reset();setTimeout(()=>{closeM('login');out.textContent=''},700)};
   try{
-   const r=signup?await sb.auth.signUp({email,password:pw,options:{data:meta}}):await sb.auth.signInWithPassword({email,password:pw});
-   if(r.error){const m=errMap.find(x=>x[0].test(r.error.message));out.textContent=m?m[1]:r.error.message;console.error(r.error);return}
-   if(signup&&!r.data.session){out.textContent=r.data.user&&r.data.user.identities&&r.data.user.identities.length===0?'ອີເມວນີ້ສະໝັກແລ້ວ — ໃຫ້ກົດ "ເຂົ້າສູ່ລະບົບ"':'ສະໝັກສຳເລັດ! ກະລຸນາກົດລິ້ງຢືນຢັນທີ່ສົ່ງໄປທາງອີເມວ ແລ້ວຄ່ອຍເຂົ້າສູ່ລະບົບ';return}
-   out.textContent=signup?'ສະໝັກສະມາຊິກສຳເລັດ':'ເຂົ້າສູ່ລະບົບສຳເລັດ';form.reset();setTimeout(()=>{closeM('login');out.textContent=''},700);
+   if(signup){
+    const r=await sb.auth.signUp({email,password:pw,options:{data:meta}});
+    if(r.error){const m=errMap.find(x=>x[0].test(r.error.message));out.textContent=m?m[1]:r.error.message;console.error(r.error);return}
+    if(r.data.session){done('ສະໝັກສະມາຊິກສຳເລັດ');return}
+    if(r.data.user&&r.data.user.identities&&r.data.user.identities.length===0){out.textContent='ອີເມວນີ້ສະໝັກແລ້ວ — ໃຫ້ກົດ "ເຂົ້າສູ່ລະບົບ" (1 ອີເມວ ສະໝັກໄດ້ 1 ບັນຊີ)';return}
+    showOtp(email,'✉️ ສະໝັກເກືອບສຳເລັດແລ້ວ!');
+   }else{
+    const r=await sb.auth.signInWithPassword({email,password:pw});
+    if(r.error){
+     if(/not confirmed/i.test(r.error.message)){await sb.auth.resend({type:'signup',email});showOtp(email,'ອີເມວນີ້ຍັງບໍ່ໄດ້ຢືນຢັນ — ໄດ້ສົ່ງລະຫັດໃໝ່ໃຫ້ແລ້ວ.');return}
+     const m=errMap.find(x=>x[0].test(r.error.message));out.textContent=m?m[1]:r.error.message;console.error(r.error);return}
+    done('ເຂົ້າສູ່ລະບົບສຳເລັດ');
+   }
   }catch(err){out.textContent='ເຊື່ອມຕໍ່ Supabase ບໍ່ໄດ້: '+err.message;console.error(err)}
   finally{if(btn)btn.disabled=false}
  });
+ const ov=$o('otpVerify');
+ ov.onclick=async()=>{
+  if(ov.disabled)return;
+  const out=$o('authStatus'),code=$o('authOtp').value.replace(/\D/g,'');
+  if(code.length!==6){out.textContent='ກະລຸນາໃສ່ລະຫັດ 6 ຕົວເລກ';return}
+  ov.disabled=true;out.textContent='ກຳລັງກວດລະຫັດ...';
+  try{
+   const r=await sb.auth.verifyOtp({email:pendingEmail,token:code,type:'signup'});
+   if(r.error){out.textContent=/expired|invalid/i.test(r.error.message)?'ລະຫັດບໍ່ຖືກ ຫຼື ໝົດອາຍຸ — ກົດ "ສົ່ງລະຫັດອີກຄັ້ງ"':r.error.message;return}
+   form.reset();out.textContent='✅ ຢືນຢັນອີເມວສຳເລັດ — ເຂົ້າສູ່ລະບົບແລ້ວ';
+   setTimeout(()=>{closeM('login');out.textContent='';otpView(false)},900);
+  }catch(err){out.textContent='ເຊື່ອມຕໍ່ Supabase ບໍ່ໄດ້: '+err.message}
+  finally{ov.disabled=false}
+ };
+ $o('authOtp').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,6);if(e.target.value.length===6)ov.onclick()});
+ $o('otpResend').onclick=async()=>{
+  const out=$o('authStatus');$o('otpResend').disabled=true;
+  const r=await sb.auth.resend({type:'signup',email:pendingEmail});
+  out.textContent=r.error?(/rate|seconds|too many/i.test(r.error.message)?'ສົ່ງຖີ່ເກີນໄປ — ລໍສັກຄູ່ແລ້ວລອງໃໝ່':r.error.message):'ສົ່ງລະຫັດໃໝ່ແລ້ວ ✉️';
+  cooldown(60);
+ };
+ $o('otpBack').onclick=()=>{otpView(false);$o('authStatus').textContent=''};
  const sf=document.getElementById('sellerForm');
  if(sf)sf.addEventListener('submit',async e=>{
   e.preventDefault();const u=await user();if(!u){openM('login');toast('กรุณาเข้าสู่ระบบก่อนสมัครเปิดร้าน');return}
   const name=document.getElementById('shopName').value.trim(),inputs=sf.querySelectorAll('input'),phone=inputs[2]?.value.trim()||'',cat=sf.querySelector('select')?.value||'Other';
-  const r=await sb.from('shops').insert({owner_id:u.id,name,phone,category:cat,status:'pending'});if(r.error){toast(r.error.message);return}closeM('seller');toast('ส่งใบสมัครเปิดร้านแล้ว');
+  const ex=await sb.from('shops').select('id,status').eq('owner_id',u.id).in('status',['pending','approved','suspended']);
+  if(ex.data&&ex.data.length){const s=ex.data[0].status;toast(s==='approved'?'ທ່ານມີຮ້ານທີ່ອະນຸມັດແລ້ວ — ກົດຊື່ຂອງທ່ານເພື່ອຈັດການຮ້ານ':s==='pending'?'ທ່ານສົ່ງຄຳຂໍເປີດຮ້ານແລ້ວ — ກຳລັງລໍ admin ອະນຸມັດ':'ຮ້ານຂອງທ່ານຖືກລະງັບ — ກະລຸນາຕິດຕໍ່ admin');closeM('seller');return}
+  const btn=sf.querySelector('button.primary');if(btn)btn.disabled=true;
+  const r=await sb.from('shops').insert({owner_id:u.id,name,phone,category:cat,status:'pending'});
+  if(btn)btn.disabled=false;
+  if(r.error){toast(/row-level security/.test(r.error.message)?'ທ່ານມີຄຳຂໍເປີດຮ້ານ ຫຼື ຮ້ານຢູ່ແລ້ວ':r.error.message);return}
+  sf.reset();closeM('seller');toast('ສົ່ງຄຳຂໍເປີດຮ້ານແລ້ວ ✅ ກະລຸນາລໍ admin ອະນຸມັດ ຈຶ່ງຈະເຂົ້າຈັດການຮ້ານໄດ້ (ເບິ່ງສະຖານະໃນເມນູຊື່ຂອງທ່ານ)');
  });
  const af=document.getElementById('affForm');
  if(af)af.addEventListener('submit',async e=>{
@@ -381,7 +428,7 @@ apply();observer.observe(document.body,{subtree:true,childList:true,characterDat
 </style>
 <script>
 function setAuthMode(m){
- authMode=m;const s=m==='signup',f=document.getElementById('authForm');
+ authMode=m;const s=m==='signup',f=document.getElementById('authForm');document.getElementById('otpBox').hidden=true;f.hidden=false;document.getElementById('authTabs').hidden=false;
  document.getElementById('tabLogin').classList.toggle('active',!s);
  document.getElementById('tabSignup').classList.toggle('active',s);
  document.getElementById('signupFields').hidden=!s;document.getElementById('pass2Wrap').hidden=!s;document.getElementById('authPass2').value='';
@@ -806,7 +853,7 @@ async function lmUpload(sb,uid,file){
   if(sb&&session){const r=await sb.from('shops').select('id,status').eq('owner_id',session.user.id).eq('status','approved').limit(1);ok=!!(r&&r.data&&r.data.some(x=>x.status==='approved'))}
   window.__isSeller=ok;if(card)card.hidden=!ok;
  }
- if(sb){sb.auth.getSession().then(r=>refreshSeller(r.data.session));sb.auth.onAuthStateChange((_e,s)=>{refreshSeller(s)})}
+ if(sb){const rs=()=>sb.auth.getSession().then(r=>refreshSeller(r.data.session));rs();sb.auth.onAuthStateChange((_e,s)=>{refreshSeller(s)});window.addEventListener('focus',rs);document.addEventListener('visibilitychange',()=>{if(!document.hidden)rs()})}
  const menu=document.createElement('div');menu.id='userMenu';menu.hidden=true;document.body.appendChild(menu);
  const SST={pending:['ລໍຖ້າ admin ອະນຸມັດ','warn'],approved:['ເປີດຮ້ານແລ້ວ','ok'],suspended:['ຖືກລະງັບ','bad'],rejected:['ຖືກປະຕິເສດ','bad']};
  const okU=u=>u&&/^https:\/\//.test(u);
@@ -837,7 +884,7 @@ async function lmUpload(sb,uid,file){
  window.toggleUserMenu=async()=>{
   if(!sb)return;
   if(!menu.hidden){menu.hidden=true;return}
-  menu.hidden=false;menu.innerHTML='<div class="muted">ກຳລັງໂຫຼດ...</div>';
+  menu.hidden=false;menu.innerHTML='<div class="muted">ກຳລັງໂຫຼດ...</div>';sb.auth.getSession().then(r=>refreshSeller(r.data.session));
   try{await render()}catch(e){menu.innerHTML='<div class="msbad">ໂຫຼດບໍ່ໄດ້: '+esc(e.message||e)+'</div>'}
  };
  document.addEventListener('click',e=>{if(!menu.hidden&&!e.target.closest('#userMenu')&&!e.target.closest('#userPill'))menu.hidden=true});

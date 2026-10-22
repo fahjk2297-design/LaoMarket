@@ -101,6 +101,7 @@
 <button type="button" id="ms-t-products" data-tab="products" class="active">📦 ສິນຄ້າຂອງຮ້ານ<small>ແກ້ໄຂ, ລຶບ, ເບິ່ງສະຕັອກ ແລະ ກຳໄລຕໍ່ຊິ້ນ</small></button>
 <button type="button" id="ms-t-orders" data-tab="orders">🧾 ອໍເດີ / ການຈັດສົ່ງ<small>ຮັບອໍເດີ, ໃສ່ເລກພັດສະດຸ, ສົ່ງຮອດລູກຄ້າ</small></button>
 <button type="button" id="ms-t-pos" data-tab="pos">🏬 ຂາຍໜ້າຮ້ານ (POS)<small>ສະແກນບາໂຄດ, ຕັດສະຕັອກ, ພິມໃບເສັດ</small></button>
+<button type="button" id="ms-t-spos" data-spos="1">🧮 SmartPOS Pro (ເຕັມຈໍ)<small>ໜ້າຂາຍແບບເຕັມ: ບາໂຄດ, ສ່ວນຫຼຸດ, ແດຊບອດ, ຕັດສະຕັອກຈິງ</small></button>
 <button type="button" id="ms-t-sales" data-tab="sales">📊 ຍອດຂາຍ / ຕົ້ນທຶນ / ກຳໄລ<small>ກຣາຟ ແລະ ສະຫຼຸບຕາມຊ່ວງເວລາ</small></button>
 <button type="button" id="ms-t-shop" data-tab="shop">🏪 ຂໍ້ມູນຮ້ານ<small>ຊື່, ລາຍລະອຽດ, ທີ່ຢູ່, ໂລໂກ້</small></button>
 <button type="button" id="ms-t-reviews" data-tab="reviews">⭐ ລີວິວຮ້ານ<small>ດາວສະເລ່ຍ ແລະ ຄຳຕິຊົມຈາກລູກຄ້າ</small></button>
@@ -127,6 +128,7 @@
 </div>
 <div id="ms-tab-orders" hidden></div>
 <div id="ms-tab-pos" hidden>
+<div style="margin-bottom:8px"><button type="button" class="primary" id="pos-open-spos" style="width:100%;padding:10px">🧮 ເປີດ SmartPOS Pro (ໜ້າຂາຍແບບເຕັມຈໍ)</button></div>
 <div class="pos-top"><input id="pos-scan" placeholder="🔎 ສະແກນບາໂຄດ ຫຼື ພິມຊື່ສິນຄ້າ ແລ້ວກົດ Enter" autocomplete="off" enterkeyhint="done"><button type="button" id="pos-cam">📷 ກ້ອງ</button></div>
 <div id="pos-hint" class="muted" style="font-size:13px;min-height:18px;margin:4px 0 8px"></div>
 <div class="pos-grid">
@@ -918,7 +920,7 @@ async function lmUpload(sb,uid,file){
   if(s){
    h+=`<div class="um-sec"><div class="um-shop">${okU(s.logo_url)?`<img class="um-logo" src="${esc(s.logo_url)}" alt="">`:'<div class="um-logo">🏪</div>'}<div style="min-width:0"><b>${esc(s.name)}</b> <span class="um-badge ${st[1]}">${st[0]}</span><div style="font-size:13px;margin-top:2px">${rate}</div>${s.description?`<div class="muted" style="font-size:13px;margin-top:3px">${esc(s.description.length>110?s.description.slice(0,110)+'…':s.description)}</div>`:'<div class="muted" style="font-size:13px;margin-top:3px">ຍັງບໍ່ໄດ້ໃສ່ລາຍລະອຽດຮ້ານ</div>'}${s.address?`<div class="muted" style="font-size:13px">📍 ${esc(s.address)}</div>`:''}${s.phone?`<div class="muted" style="font-size:13px">📞 ${esc(s.phone)}</div>`:''}</div></div>`;
    if(s.status==='approved'){
-    h+=item('add','➕ ເພີ່ມສິນຄ້າ','ຊື່, ຮູບ, ຕົ້ນທຶນ, ລາຄາຂາຍ, ສະຕັອກ')+item('products','📦 ສິນຄ້າຂອງຮ້ານ','ແກ້ໄຂ / ລຶບ / ເບິ່ງກຳໄລຕໍ່ຊິ້ນ')+item('orders','🧾 ອໍເດີ / ການຈັດສົ່ງ','ຮັບອໍເດີ, ເລກພັດສະດຸ, ສົ່ງຮອດລູກຄ້າ')+item('pos','🏬 ຂາຍໜ້າຮ້ານ (POS)','ສະແກນບາໂຄດ, ຕັດສະຕັອກ, ພິມໃບເສັດ')+item('sales','📊 ຍອດຂາຍ / ຕົ້ນທຶນ / ກຳໄລ','ກຣາຟ ແລະ ສະຫຼຸບ')+item('shop','🏪 ແກ້ໄຂຂໍ້ມູນຮ້ານ','ຊື່, ລາຍລະອຽດ, ທີ່ຢູ່, ໂລໂກ້')+item('reviews','⭐ ລີວິວຮ້ານ','ດາວ ແລະ ຄຳຕິຊົມຈາກລູກຄ້າ');
+    h+=item('add','➕ ເພີ່ມສິນຄ້າ','ຊື່, ຮູບ, ຕົ້ນທຶນ, ລາຄາຂາຍ, ສະຕັອກ')+item('products','📦 ສິນຄ້າຂອງຮ້ານ','ແກ້ໄຂ / ລຶບ / ເບິ່ງກຳໄລຕໍ່ຊິ້ນ')+item('orders','🧾 ອໍເດີ / ການຈັດສົ່ງ','ຮັບອໍເດີ, ເລກພັດສະດຸ, ສົ່ງຮອດລູກຄ້າ')+item('pos','🏬 ຂາຍໜ້າຮ້ານ (POS)','ສະແກນບາໂຄດ, ຕັດສະຕັອກ, ພິມໃບເສັດ')+item('spos','🧮 SmartPOS Pro (ເຕັມຈໍ)','ໜ້າຂາຍແບບເຕັມ ເຊື່ອມສະຕັອກຮ້ານ')+item('sales','📊 ຍອດຂາຍ / ຕົ້ນທຶນ / ກຳໄລ','ກຣາຟ ແລະ ສະຫຼຸບ')+item('shop','🏪 ແກ້ໄຂຂໍ້ມູນຮ້ານ','ຊື່, ລາຍລະອຽດ, ທີ່ຢູ່, ໂລໂກ້')+item('reviews','⭐ ລີວິວຮ້ານ','ດາວ ແລະ ຄຳຕິຊົມຈາກລູກຄ້າ');
    }else h+=`<div class="muted" style="margin-top:8px;font-size:13px">${s.status==='pending'?'ເມື່ອ admin ອະນຸມັດແລ້ວ ຈະເຫັນເມນູຈັດການຮ້ານຢູ່ບ່ອນນີ້':'ກະລຸນາຕິດຕໍ່ admin'}</div>`;
    h+='</div>';
   }else h+=`<div class="um-sec"><div class="muted" style="font-size:13px">ທ່ານຍັງບໍ່ມີຮ້ານຄ້າ</div>${item('apply','🏪 ສະໝັກເປີດຮ້ານ','ເລີ່ມຂາຍສິນຄ້າຂອງທ່ານ')}</div>`;
@@ -937,7 +939,8 @@ async function lmUpload(sb,uid,file){
   const b=e.target.closest('[data-go]');if(!b)return;menu.hidden=true;const g=b.dataset.go;
   if(g==='logout')document.getElementById('logoutBtn').click();
   else if(g==='track')openTrack();
-  else if(g==='apply')openM('seller');
+  else if(g==='spos')Promise.resolve(window.openMyStore('pos')).then(()=>window.openSmartPos());
+   else if(g==='apply')openM('seller');
   else openMyStore(g);
  });
 })();
@@ -1118,6 +1121,29 @@ async function lmUpload(sb,uid,file){
    if(r.error){hint('ຍົກເລີກບໍ່ໄດ້: '+r.error.message,true);return}
    hint('ຍົກເລີກບິນແລ້ວ ແລະ ຄືນສະຕັອກແລ້ວ');await loadProds();loadToday();if(window.lmReload)window.lmReload()}
  });
+})();
+</script>
+<style>#spos{position:fixed;inset:0;z-index:10060;background:#0f172a;display:none;flex-direction:column}#spos.open{display:flex}#spos .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;padding-top:max(6px,env(safe-area-inset-top));color:#fff;font-weight:700}#spos .bar button{padding:6px 14px;border-radius:10px;font-weight:700}#spos iframe{flex:1;width:100%;border:0;background:#fff}</style>
+<div id="spos"><div class="bar"><span>🧮 SmartPOS Pro — <span id="spos-shop"></span></span><button type="button" id="spos-close">✕ ປິດ / ກັບຄືນ</button></div><iframe id="spos-frame" title="SmartPOS Pro" allow="camera; fullscreen"></iframe></div>
+<script>
+(function(){
+ const $=id=>document.getElementById(id);
+ window.openSmartPos=function(){
+  const shop=window.msGetShop&&window.msGetShop();
+  if(!window.__isSeller||!shop||!shop.id){toast('ຕ້ອງເປັນເຈົ້າຂອງຮ້ານທີ່ admin ອະນຸມັດແລ້ວ');return}
+  $('spos-shop').textContent=shop.name||'';
+  $('spos-frame').src='./smart_pos.html?embed=1';
+  $('spos').classList.add('open');document.body.style.overflow='hidden';
+  setTimeout(()=>{try{$('spos-frame').contentWindow.focus()}catch(e){}},600);
+ };
+ function closeSpos(){
+  $('spos').classList.remove('open');$('spos-frame').src='about:blank';document.body.style.overflow='';
+  if(window.lmReload)window.lmReload();
+  const pt=$('ms-tab-pos');if(pt&&!pt.hidden&&window.posOpen)window.posOpen();
+ }
+ $('spos-close').onclick=closeSpos;
+ $('pos-open-spos').onclick=window.openSmartPos;
+ $('ms-tabs').addEventListener('click',e=>{if(e.target.closest('[data-spos]')){$('ms-tabs').hidden=true;window.openSmartPos()}});
 })();
 </script>
 </body></html>

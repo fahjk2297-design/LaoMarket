@@ -1235,8 +1235,192 @@ create policy "seller create own shop" on public.shops for insert with check (
 
 
 -- =====================================================================
--- v10: e-mail verification by 6-digit code at first sign-up (Supabase "Confirm email" = ON)
---      Removes the earlier auto-confirm safety net so the code is really required.
+-- v10: e-mail verification by confirmation link at first sign-up (Supabase "Confirm email" = ON)
+--      Removes the earlier auto-confirm safety net so members really must click the e-mail link once.
 -- =====================================================================
 drop trigger if exists auto_confirm_email on auth.users;
 drop function if exists public.auto_confirm_email();
+
+
+-- =====================================================================
+-- v11: POS (in-store sales) for APPROVED shop owners: barcode on products,
+--      server-side stock deduction, receipts, void, and POS in the sales report
+-- =====================================================================
+alter table public.products add column if not exists barcode text;
+create unique index if not exists products_shop_barcode_uq
+  on public.products (shop_id, barcode) where barcode is not null and barcode <> '';
+
+create table if not exists public.pos_sales (
+  id uuid primary key default gen_random_uuid(),
+  sale_number text not null unique,
+  shop_id uuid not null references public.shops(id) on delete cascade,
+  cashier_id uuid references public.profiles(id) on delete set null,
+  subtotal_lak bigint not null check (subtotal_lak >= 0),
+  discount_lak bigint not null default 0 check (discount_lak >= 0),
+  total_lak bigint not null check (total_lak >= 0),
+  payment_method text not null check (payment_method in ('cash','transfer','qr')),
+  paid_lak bigint not null check (paid_lak >= 0),
+  change_lak bigint not null default 0 check (change_lak >= 0),
+  status text not null default 'completed' check (status in ('completed','voided')),
+  created_at timestamptz not null default now(),
+  voided_at timestamptz
+);
+create index if not exists pos_sales_shop_idx on public.pos_sales (shop_id, created_at desc);
+
+create table if not exists public.pos_sale_items (
+  id uuid primary key default gen_random_uuid(),
+  sale_id uuid not null references public.pos_sales(id) on delete cascade,
+  product_id uuid references public.products(id) on delete set null,
+  product_name text not null,
+  barcode text,
+  quantity int not null check (quantity > 0),
+  unit_price_lak bigint not null check (unit_price_lak >= 0),
+  unit_cost_lak bigint,
+  discount_lak bigint not null default 0 check (discount_lak >= 0),
+  line_total_lak bigint not null check (line_total_lak >= 0)
+);
+create index if not exists pos_sale_items_sale_idx on public.pos_sale_items (sale_id);
+
+alter table public.pos_sales enable row level security;
+alter table public.pos_sale_items enable row level security;
+drop policy if exists "owner or admin read pos sales" on public.pos_sales;
+create policy "owner or admin read pos sales" on public.pos_sales for select
+  using (public.owns_shop(shop_id) or public.is_admin());
+drop policy if exists "owner or admin read pos items" on public.pos_sale_items;
+create policy "owner or admin read pos items" on public.pos_sale_items for select
+  using (exists (select 1 from public.pos_sales s where s.id = sale_id and (public.owns_shop(s.shop_id) or public.is_admin())));
+-- no insert/update/delete policies: all writes go through pos_checkout / pos_void_sale
+
+create or replace function public.pos_checkout(
+  p_shop uuid, p_items jsonb, p_payment text, p_paid bigint default null, p_discount bigint default 0)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid(); it record; pr record;
+  sub bigint := 0; n int := 0; disc bigint := coalesce(p_discount, 0); tot bigint; paid bigint; chg bigint := 0;
+  sid uuid; num text; cum bigint := 0; prev bigint := 0; cur bigint; alloc bigint; gross bigint; cst bigint;
+begin
+  if uid is null then raise exception 'not_authenticated'; end if;
+  if not exists (select 1 from shops where id = p_shop and owner_id = uid and status = 'approved') then
+    raise exception 'shop_not_approved'; end if;
+  if p_payment not in ('cash','transfer','qr') then raise exception 'bad_payment'; end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'empty_cart'; end if;
+
+  -- pass 1: validate + lock + subtotal (same product twice is merged)
+  for it in select (v->>'id')::uuid as id, sum((v->>'qty')::int)::int as qty
+            from jsonb_array_elements(p_items) v group by 1 loop
+    if it.qty is null or it.qty <= 0 or it.qty > 1000 then raise exception 'bad_quantity'; end if;
+    select * into pr from products where id = it.id and shop_id = p_shop for update;
+    if not found then raise exception 'product_not_found'; end if;
+    if pr.status = 'draft' then raise exception 'product_not_found'; end if;
+    if pr.stock < it.qty then raise exception 'insufficient_stock: %', pr.name; end if;
+    sub := sub + pr.price_lak * it.qty; n := n + 1;
+  end loop;
+  if disc < 0 or disc > sub then raise exception 'bad_discount'; end if;
+  tot := sub - disc;
+  if p_payment = 'cash' then
+    paid := coalesce(p_paid, tot);
+    if paid < tot then raise exception 'insufficient_payment'; end if;
+    chg := paid - tot;
+  else
+    paid := tot;
+  end if;
+
+  num := 'POS-' || to_char(now() at time zone 'Asia/Vientiane', 'YYMMDD') || '-' ||
+         upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+  insert into pos_sales (sale_number, shop_id, cashier_id, subtotal_lak, discount_lak, total_lak, payment_method, paid_lak, change_lak)
+  values (num, p_shop, uid, sub, disc, tot, p_payment, paid, chg) returning id into sid;
+
+  -- pass 2: lines, proportional discount (sums exactly to disc), stock deduction
+  for it in select (v->>'id')::uuid as id, sum((v->>'qty')::int)::int as qty
+            from jsonb_array_elements(p_items) v group by 1 loop
+    select * into pr from products where id = it.id and shop_id = p_shop;
+    select cost_lak into cst from product_costs where product_id = pr.id;
+    gross := pr.price_lak * it.qty;
+    cum := cum + gross;
+    cur := case when sub > 0 then round(disc::numeric * cum / sub) else 0 end;
+    alloc := cur - prev; prev := cur;
+    insert into pos_sale_items (sale_id, product_id, product_name, barcode, quantity, unit_price_lak, unit_cost_lak, discount_lak, line_total_lak)
+    values (sid, pr.id, pr.name, pr.barcode, it.qty, pr.price_lak, cst, alloc, gross);
+    update products set stock = stock - it.qty,
+      status = case when stock - it.qty = 0 and status = 'active' then 'out_of_stock' else status end,
+      updated_at = now()
+    where id = pr.id;
+  end loop;
+
+  return jsonb_build_object('sale_id', sid, 'sale_number', num, 'subtotal', sub, 'discount', disc,
+                            'total', tot, 'paid', paid, 'change', chg);
+end; $$;
+revoke all on function public.pos_checkout(uuid,jsonb,text,bigint,bigint) from public, anon;
+grant execute on function public.pos_checkout(uuid,jsonb,text,bigint,bigint) to authenticated;
+
+create or replace function public.pos_void_sale(p_sale uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare s record;
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  select * into s from pos_sales where id = p_sale for update;
+  if not found then raise exception 'sale_not_found'; end if;
+  if not exists (select 1 from shops where id = s.shop_id and owner_id = auth.uid() and status = 'approved') then
+    raise exception 'shop_not_approved'; end if;
+  if s.status <> 'completed' then raise exception 'already_voided'; end if;
+  update products p set stock = p.stock + i.q,
+         status = case when p.status = 'out_of_stock' then 'active' else p.status end,
+         updated_at = now()
+  from (select product_id, sum(quantity) as q from pos_sale_items
+        where sale_id = s.id and product_id is not null group by product_id) i
+  where p.id = i.product_id;
+  update pos_sales set status = 'voided', voided_at = now() where id = s.id;
+end; $$;
+revoke all on function public.pos_void_sale(uuid) from public, anon;
+grant execute on function public.pos_void_sale(uuid) to authenticated;
+
+-- sales report now includes POS sales (online + in-store)
+create or replace function public.seller_sales_report(p_shop uuid, p_from date, p_to date)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare res jsonb; tz text := 'Asia/Vientiane';
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  if not (public.is_admin() or exists (select 1 from shops where id = p_shop and owner_id = auth.uid())) then
+    raise exception 'forbidden'; end if;
+  if p_from is null or p_to is null or p_to < p_from or p_to - p_from > 366 then raise exception 'bad_range'; end if;
+  with base as (
+    select (o.created_at at time zone tz)::date as d, o.id as oid, i.product_name, i.quantity as q,
+           i.line_total_lak as rev, (c.unit_cost_lak * i.quantity) as cost, (c.unit_cost_lak is null) as nocost,
+           (o.payment_status = 'confirmed' or so.status = 'delivered') as realized, false as is_pos
+    from order_items i
+    join orders o on o.id = i.order_id
+    join shop_orders so on so.order_id = o.id and so.shop_id = i.shop_id
+    left join order_item_costs c on c.order_item_id = i.id
+    where i.shop_id = p_shop and o.status <> 'cancelled' and so.status <> 'cancelled'
+      and (o.created_at at time zone tz)::date between p_from and p_to
+    union all
+    select (s.created_at at time zone tz)::date, s.id, i.product_name, i.quantity,
+           i.line_total_lak - i.discount_lak, (i.unit_cost_lak * i.quantity), (i.unit_cost_lak is null), true, true
+    from pos_sale_items i join pos_sales s on s.id = i.sale_id
+    where s.shop_id = p_shop and s.status = 'completed'
+      and (s.created_at at time zone tz)::date between p_from and p_to),
+  sale as (select * from base where realized)
+  select jsonb_build_object(
+    'totals', jsonb_build_object(
+      'revenue', coalesce((select sum(rev) from sale), 0),
+      'cost', coalesce((select sum(cost) from sale), 0),
+      'profit', coalesce((select sum(rev - coalesce(cost, 0)) from sale), 0),
+      'orders', (select count(distinct oid) from sale),
+      'items', coalesce((select sum(q) from sale), 0),
+      'pending_amount', coalesce((select sum(rev) from base where not realized), 0),
+      'pending_orders', (select count(distinct oid) from base where not realized),
+      'missing_cost', (select count(*) from sale where nocost),
+      'pos_revenue', coalesce((select sum(rev) from sale where is_pos), 0),
+      'pos_sales', (select count(distinct oid) from sale where is_pos)),
+    'daily', coalesce((select jsonb_agg(jsonb_build_object('d', d, 'revenue', r, 'cost', c, 'profit', pf, 'orders', n) order by d)
+                       from (select d, sum(rev) r, coalesce(sum(cost), 0) c, sum(rev - coalesce(cost, 0)) pf, count(distinct oid) n
+                             from sale group by d) x), '[]'::jsonb),
+    'products', coalesce((select jsonb_agg(jsonb_build_object('name', n, 'qty', q, 'revenue', r, 'cost', c, 'profit', pf) order by pf desc)
+                          from (select product_name n, sum(q) q, sum(rev) r, coalesce(sum(cost), 0) c, sum(rev - coalesce(cost, 0)) pf
+                                from sale group by product_name order by sum(rev - coalesce(cost, 0)) desc limit 10) y), '[]'::jsonb)
+  ) into res;
+  return res;
+end; $$;
+revoke all on function public.seller_sales_report(uuid,date,date) from public, anon;
+grant execute on function public.seller_sales_report(uuid,date,date) to authenticated;

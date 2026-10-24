@@ -1424,3 +1424,26 @@ begin
 end; $$;
 revoke all on function public.seller_sales_report(uuid,date,date) from public, anon;
 grant execute on function public.seller_sales_report(uuid,date,date) to authenticated;
+
+
+-- =====================================================================
+-- v12: SmartPOS (pos.html) per-shop settings: store info, categories,
+--      currencies, members, low-stock thresholds. Products, stock, costs and
+--      sales already live in products / product_costs / pos_sales (v11).
+-- =====================================================================
+create table if not exists public.pos_settings (
+  shop_id uuid primary key references public.shops(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.pos_settings enable row level security;
+
+drop policy if exists "owner or admin read pos settings" on public.pos_settings;
+create policy "owner or admin read pos settings" on public.pos_settings for select
+  using (public.owns_shop(shop_id) or public.is_admin());
+drop policy if exists "approved owner insert pos settings" on public.pos_settings;
+create policy "approved owner insert pos settings" on public.pos_settings for insert
+  with check (public.owns_approved_shop(shop_id));
+drop policy if exists "approved owner update pos settings" on public.pos_settings;
+create policy "approved owner update pos settings" on public.pos_settings for update
+  using (public.owns_approved_shop(shop_id)) with check (public.owns_approved_shop(shop_id));

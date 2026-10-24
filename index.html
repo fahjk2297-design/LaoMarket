@@ -36,7 +36,7 @@
 <div id="productSection" class="section"><h2>สินค้าแนะนำ</h2><span id="result" class="muted"></span></div><div id="products" class="products"></div>
 <section class="panel"><div class="section" style="margin-top:0"><h2>ขายและสร้างรายได้กับ LaoMarket</h2></div><div class="features">
 <div class="feature"><div class="emoji">🏪</div><h3>เปิดร้านค้า</h3><p class="muted">ลงสินค้าและติดตามคำสั่งซื้อ</p><button onclick="openM('seller')">สมัครเป็นผู้ขาย</button></div>
-<div class="feature"><div class="emoji">🔗</div><h3>Affiliate</h3><p class="muted">สร้างลิงก์แนะนำสินค้าใน</p><button onclick="openM('affiliate')">เริ่มแนะนำสินค้า</button></div>
+<div class="feature"><div class="emoji">🔗</div><h3>Affiliate</h3><p class="muted">สร้างลิงก์แนะนำสินค้าใน</p><button onclick="openM('affiliate')">ເລີ່ມແນະນຳສິນຄ້າ</button><button style="margin-top:8px;width:100%" onclick="openAffiliateDashboard()">📊 ເຂົ້າ Dashboard Affiliate</button></div>
 <div class="feature" id="sellerCard" hidden><div class="emoji">🏪</div><h3>ຈັດການຮ້ານຄ້າ</h3><p class="muted">ສຳລັບຄົນຢາກຂາຍຂອງ: ເພີ່ມສິນຄ້າ ສະຕັອກ ລາຄາຕົ້ນທຶນ ແລະ ລາຄາຂາຍ</p><button class="primary" onclick="openMyStore()">ເປີດ / ຈັດການຮ້ານຄ້າ</button></div></div></section>
 
 <section class="panel" id="lm-promo-section" style="margin:24px auto;background:linear-gradient(120deg,#ecfdf5,#fff7ed);border:1px solid #cde9d9">
@@ -73,6 +73,20 @@
 <div class="modalbg" id="mystore"><div class="modal" style="max-width:940px;width:96%;max-height:92vh;overflow:auto">
 <style>.msbar{margin:8px 0}.msbar button{width:100%;text-align:left;padding:11px 14px;border-radius:12px;border:2px solid #1a73e8;background:#fff;color:#1a53b0;font-weight:700;font-size:15px;cursor:pointer}.msbar button b{color:#087f5b;margin-left:6px}
 .mstabs{display:flex;flex-direction:column;gap:6px;margin:0 0 12px;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 8px 22px rgba(0,0,0,.12)}
+/* LaoMarket seller workspace: persistent left navigation and readable detail panels */
+@media(min-width:900px){
+ #mystore .modal{position:relative;padding-left:270px;min-height:560px}
+ #mystore .mhead,#mystore #ms-state,#mystore #ms-main{min-width:0}
+ #mystore #ms-main{display:contents}
+ #mystore #ms-shopline{grid-column:1/-1}
+ #mystore .msbar{position:absolute;left:16px;top:76px;width:238px}
+ #mystore .mstabs{position:absolute;display:flex!important;flex-direction:column;left:16px;top:118px;width:238px;margin:0;max-height:calc(90vh - 150px);overflow:auto;box-shadow:none}
+ #mystore .mstabs[hidden]{display:flex!important}
+ #mystore #ms-burger{display:none}
+ #mystore #ms-tab-products,#mystore #ms-tab-orders,#mystore #ms-tab-pos,#mystore #ms-tab-sales,#mystore #ms-tab-shop,#mystore #ms-tab-reviews,#mystore #ms-form{grid-column:2}
+ #mystore #ms-tab-products[hidden],#mystore #ms-tab-orders[hidden],#mystore #ms-tab-pos[hidden],#mystore #ms-tab-sales[hidden],#mystore #ms-tab-shop[hidden],#mystore #ms-tab-reviews[hidden]{display:none!important}
+}
+
 .mstabs button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid #dfe9e3;background:#f7fbf8;color:#1f3a2b;font-weight:700;cursor:pointer}
 .mstabs button small{font-weight:400;color:#6a7a72;font-size:12px}.mstabs button:hover{background:#eaf6ee}.mstabs button.active{background:linear-gradient(135deg,#0f9d58,#1a73e8);color:#fff;border-color:transparent}.mstabs button.active small{color:#e3f2ff}
 .pos-top{display:flex;gap:8px}.pos-top input{flex:1;font-size:18px;padding:12px;border:2px solid #1a73e8;border-radius:12px}.pos-top button{padding:0 16px;border-radius:12px}
@@ -186,7 +200,7 @@
 <div class="mhead"><h2>📦 ຕິດຕາມອໍເດີຂອງຂ້ອຍ</h2><button type="button" onclick="closeM('track')">ປິດ ✕</button></div>
 <div id="tr-prefs" style="margin:6px 0 10px;font-size:14px"><b>🔔 ແຈ້ງເຕືອນເມື່ອສະຖານະອໍເດີປ່ຽນ</b><br><label><input type="checkbox" id="tr-pe" checked> ອີເມວ</label> &nbsp; <label><input type="checkbox" id="tr-pw" checked> WhatsApp (ເບີທີ່ໃສ່ຕອນສັ່ງຊື້)</label></div><div id="tr-state" class="muted"></div><div id="tr-list"></div>
 </div></div>
-<div class="modalbg" id="checkout"><div class="modal"><div class="mhead"><h2>ยืนยันคำสั่งซื้อ ()</h2><button onclick="closeM('checkout')">ปิด ✕</button></div><div class="notice">ເລືອກ "ໂອນທະນາຄານ / QR" ແລ້ວຫຼັງສັ່ງຊື້ລະບົບຈະສະແດງເລກບັນຊີ ແລະ ໃຫ້ອັບໂຫຼດບິນຊຳລະເງິນ. ຖ້າເລືອກ "ເກັບເງິນປາຍທາງ" ຊຳລະເມື່ອຮັບສິນຄ້າ.</div><form id="checkoutForm"><div class="field"><label>ชื่อผู้รับ</label><input required id="buyerName"></div><div class="field"><label>เบอร์โทร</label><input required id="buyerPhone" placeholder="+856..."></div><div class="field"><label>ที่อยู่จัดส่ง</label><textarea required id="buyerAddress" rows="3"></textarea></div><div class="field"><label>วิธีชำระเงิน ()</label><select id="pay"><option value="cash_on_delivery">ເກັບເງິນປາຍທາງ</option><option value="bank_transfer">ໂອນທະນາຄານ (ອັບໂຫຼດບິນຫຼັງສັ່ງຊື້)</option><option value="qr_payment">QR Payment (ອັບໂຫຼດບິນຫຼັງສັ່ງຊື້)</option></select></div><button class="primary">สั่งซื้อ</button></form></div></div><div id="toast" class="toast"></div>
+<div class="modalbg" id="checkout"><div class="modal"><div class="mhead"><h2>ยืนยันคำสั่งซื้อ ()</h2><button onclick="closeM('checkout')">ปิด ✕</button></div><div class="notice">ເລືອກ "ໂອນທະນາຄານ / QR" ແລ້ວຫຼັງສັ່ງຊື້ລະບົບຈະສະແດງເລກບັນຊີ ແລະ ໃຫ້ອັບໂຫຼດບິນຊຳລະເງິນ. ຖ້າເລືອກ "ເກັບເງິນປາຍທາງ" ຊຳລະເມື່ອຮັບສິນຄ້າ.</div><form id="checkoutForm"><div class="field"><label>ชื่อผู้รับ</label><input required id="buyerName"></div><div class="field"><label>เบอร์โทร</label><input required id="buyerPhone" placeholder="+856..."></div><div class="field"><label>ที่อยู่จัดส่ง</label><textarea required id="buyerAddress" rows="3"></textarea></div><div class="field"><label>วิธีชำระเงิน ()</label><select id="pay"><option value="cash_on_delivery">ເກັບເງິນປາຍທາງ</option><option value="bank_transfer">ໂອນທະນາຄານ (ອັບໂຫຼດບິນຫຼັງສັ່ງຊື້)</option><option value="qr_payment">QR Payment (ອັບໂຫຼດບິນຫຼັງສັ່ງຊື້)</option></select></div><button class="primary">สั่งซื้อ</button></form></div></div><div class="modalbg" id="affiliateDashboard"><div class="modal" style="width:min(1000px,100%);max-width:1000px"><div class="mhead"><h2>📊 Dashboard ນາຍໜ້າ Affiliate</h2><button onclick="closeM('affiliateDashboard')">ປິດ ✕</button></div><div id="affDashNotice" class="notice">ກຳລັງໂຫຼດຂໍ້ມູນ...</div><div id="affDashContent" hidden><div class="panel" style="margin-top:12px"><div class="section" style="margin-top:0"><div><b>ລິ້ງແນະນຳຂອງທ່ານ</b><div class="small">ແບ່ງປັນລິ້ງນີ້ເພື່ອໃຫ້ລະບົບລະບຸການແນະນຳ</div></div><button onclick="refreshAffiliateDashboard()">↻ ໂຫຼດໃໝ່</button></div><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="affDashLink" readonly style="flex:1;min-width:220px;padding:10px;border:1px solid #ccd9d1;border-radius:8px"><button class="primary" onclick="copyAffiliateLink()">ຄັດລອກລິ້ງ</button></div><div class="small" id="affDashCode" style="margin-top:8px"></div></div><div id="affDashStats" class="features" style="margin-top:14px"></div><div class="panel"><div class="section" style="margin-top:0"><h3 style="margin:0">📦 ປະຫວັດລາຍການຂາຍ</h3><span class="small">ສະແດງຈາກລາຍການຄ່າຄອມມິດຊັນ</span></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:680px"><thead><tr style="text-align:left;background:#f4f8f5"><th style="padding:10px">ວັນທີຂາຍ</th><th style="padding:10px">ເລກອໍເດີ</th><th style="padding:10px">ຍອດຂາຍ</th><th style="padding:10px">ຄ່າຕອບແທນ</th><th style="padding:10px">ສະຖານະ</th><th style="padding:10px">ວັນທີຈ່າຍ</th></tr></thead><tbody id="affDashRows"><tr><td colspan="6" style="padding:12px">ກຳລັງໂຫຼດ...</td></tr></tbody></table></div></div></div></div></div><div id="toast" class="toast"></div>
 <script>
 const defaults=[
 {id:1,name:"หูฟังไร้สาย Bluetooth",price:185000,cat:"อิเล็กทรอนิกส์",emoji:"🎧",seller:"Tech Vientiane"},
@@ -764,8 +778,8 @@ async function lmUpload(sb,uid,file){
   ordersData=data||[];renderOrders();
  }
  function renderOrders(){
-  const list=ordersData.filter(o=>ofilter==='all'||(ofilter==='todo'&&['pending','confirmed'].includes(o.fulfillment))||(ofilter==='ship'&&o.fulfillment==='shipped')||(ofilter==='done'&&o.fulfillment==='delivered'));
-  $('ms-tab-orders').innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+[['all','ທັງໝົດ'],['todo','ຕ້ອງຈັດການ'],['ship','ກຳລັງຈັດສົ່ງ'],['done','ສຳເລັດ']].map(f=>`<button type="button" data-of="${f[0]}" class="${ofilter===f[0]?'primary':''}">${f[1]}</button>`).join('')+'<button type="button" data-refresh="1">🔄 ຣີເຟຣດ</button></div>'+(list.length?list.map(card).join(''):'<p class="muted">ຍັງບໍ່ມີອໍເດີ</p>');
+  const list=ordersData.filter(o=>ofilter==='all'||(ofilter==='todo'&&['pending','confirmed'].includes(o.fulfillment))||(ofilter==='payment'&&o.payment_status!=='confirmed'&&o.payment_method!=='cash_on_delivery')||(ofilter==='rejected'&&['rejected','failed'].includes(o.payment_status))||(ofilter==='ship'&&o.fulfillment==='shipped')||(ofilter==='done'&&o.fulfillment==='delivered'));
+  $('ms-tab-orders').innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+[['all','ທັງໝົດ'],['todo','ຕ້ອງຈັດການ'],['payment','ລໍຖ້າກວດບິນ'],['rejected','ບິນບໍ່ຜ່ານ'],['ship','ກຳລັງຈັດສົ່ງ'],['done','ສຳເລັດ']].map(f=>`<button type="button" data-of="${f[0]}" class="${ofilter===f[0]?'primary':''}">${f[1]}</button>`).join('')+'<button type="button" data-refresh="1">🔄 ຣີເຟຣດ</button></div>'+(list.length?list.map(card).join(''):'<p class="muted">ຍັງບໍ່ມີອໍເດີ</p>');
  }
  function card(o){
   const f=FST[o.fulfillment]||[o.fulfillment,''],paid=o.payment_status==='confirmed',cod=o.payment_method==='cash_on_delivery',blocked=!cod&&!paid,no=esc(o.order_number);
@@ -778,7 +792,7 @@ async function lmUpload(sb,uid,file){
   else act='<span class="trb ok">✅ ສຳເລັດການຈັດສົ່ງ</span>';
   return `<div class="trc"><div class="trh" style="cursor:default"><div><b>${no}</b><div class="muted" style="font-size:12px">${esc(dt(o.created_at))}</div></div><div style="text-align:right"><b>${fmt(o.shop_total)}</b><br><span class="trb ${f[1]}">${f[0]}</span></div></div>
   <div style="margin:6px 0">${(o.items||[]).map(i=>`${esc(i.name)} × ${i.qty} — ${fmt(i.total)}`).join('<br>')}</div>
-  <div class="muted" style="font-size:13px">👤 ${esc(o.customer_name)} · 📞 <a href="tel:${esc(String(o.phone).replace(/[^0-9+]/g,''))}">${esc(o.phone)}</a><br>📍 ${esc(o.address)}<br>💳 ${esc(PM[o.payment_method]||o.payment_method)} · ${paid?'ຊຳລະແລ້ວ':cod?'ເກັບເງິນປາຍທາງ (ສິນຄ້າຂອງຮ້ານ '+fmt(o.shop_total)+')':'ລໍຖ້າຊຳລະ'}${o.tracking_number?`<br>🚚 ${esc(o.carrier||'')} ${esc(o.tracking_number)}`:''}</div>
+  <div class="muted" style="font-size:13px">👤 ${esc(o.customer_name)} · 📞 <a href="tel:${esc(String(o.phone).replace(/[^0-9+]/g,''))}">${esc(o.phone)}</a><br>📍 ${esc(o.address)}<br>💳 ${esc(PM[o.payment_method]||o.payment_method)} · ${paid?'ຊຳລະແລ້ວ':cod?'ເກັບເງິນປາຍທາງ (ສິນຄ້າຂອງຮ້ານ '+fmt(o.shop_total)+')':'ລໍຖ້າຊຳລະ'}${o.tracking_number?`<br>🚚 ${esc(o.carrier||'')} ${esc(o.tracking_number)}`:''}${o.payment_slip_path?`<br>🧾 <button type="button" data-slip="${esc(o.payment_slip_path)}">ເບິ່ງບິນຊຳລະເງິນ</button>`:''}</div>
   <div style="margin-top:8px" data-card="${no}">${act}</div></div>`;
  }
  const FERR={payment_not_confirmed:'ຍັງບໍ່ໄດ້ຢືນຢັນການຊຳລະເງິນ',invalid_transition:'ສະຖານະບໍ່ຖືກລຳດັບ — ກົດຣີເຟຣດ',order_cancelled:'ອໍເດີຖືກຍົກເລີກແລ້ວ'};
@@ -1144,6 +1158,49 @@ async function lmUpload(sb,uid,file){
  $('spos-close').onclick=closeSpos;
  $('pos-open-spos').onclick=window.openSmartPos;
  $('ms-tabs').addEventListener('click',e=>{if(e.target.closest('[data-spos]')){$('ms-tabs').hidden=true;window.openSmartPos()}});
+})();
+</script>
+<script>
+(function(){
+ const sb=window.laoMarketSupabase;
+ try{const ref=new URLSearchParams(location.search).get('ref');if(ref&&/^[A-Z0-9_-]{4,40}$/i.test(ref))localStorage.setItem('lm_affiliate_ref',ref.toUpperCase());}catch(e){}
+ const $=id=>document.getElementById(id);
+ let currentAffiliate=null;
+ const lak=n=>new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(n||0))+' ₭';
+ const dateVal=v=>v?new Date(v).toLocaleDateString('lo-LA',{year:'numeric',month:'short',day:'numeric'}):'—';
+ const escAff=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ window.openAffiliateDashboard=async function(){
+   if(!sb){openM('affiliateDashboard');$('affDashNotice').textContent='ກະລຸນາຕັ້ງຄ່າ Supabase ໃນ config.js ກ່ອນ';$('affDashContent').hidden=true;return;}
+   const {data:{user:u}}=await sb.auth.getUser();
+   if(!u){openM('login');toast('ກະລຸນາເຂົ້າລະບົບກ່ອນ');return;}
+   openM('affiliateDashboard');await refreshAffiliateDashboard();
+ };
+ window.refreshAffiliateDashboard=async function(){
+   if(!sb)return;
+   const notice=$('affDashNotice'),content=$('affDashContent');notice.hidden=false;content.hidden=true;notice.textContent='ກຳລັງໂຫຼດຂໍ້ມູນ...';
+   const {data:{user:u}}=await sb.auth.getUser();if(!u){notice.textContent='ກະລຸນາເຂົ້າລະບົບ';return;}
+   const pr=await sb.from('affiliate_profiles').select('id,user_id,referral_code,status').eq('user_id',u.id).maybeSingle();
+   if(pr.error){notice.textContent='ອ່ານຂໍ້ມູນ Affiliate ບໍ່ສຳເລັດ: '+pr.error.message;return;}
+   if(!pr.data){notice.innerHTML='ທ່ານຍັງບໍ່ໄດ້ສະໝັກ Affiliate. <button class="primary" onclick="closeM(\'affiliateDashboard\');openM(\'affiliate\')">ສະໝັກຕອນນີ້</button>';return;}
+   currentAffiliate=pr.data;
+   const url=new URL(location.href);url.hash='';url.search='';url.searchParams.set('ref',pr.data.referral_code||'');
+   $('affDashLink').value=url.toString();$('affDashCode').textContent='ລະຫັດ: '+(pr.data.referral_code||'—')+' · ສະຖານະບັນຊີ: '+(pr.data.status||'pending');
+   const cr=await sb.from('affiliate_commissions').select('id,order_id,order_total_lak,commission_lak,status,paid_at,created_at').eq('affiliate_id',pr.data.id).order('created_at',{ascending:false}).limit(500);
+   if(cr.error){notice.hidden=false;notice.textContent='Dashboard ໄດ້ສ້າງແລ້ວ ແຕ່ຍັງອ່ານຕາຕະລາງ affiliate_commissions ບໍ່ໄດ້. ກະລຸນາຮັນໄຟລ໌ SQL ຕັ້ງຄ່າທີ່ແນບມາ ແລະ ຕັ້ງຄ່າ RLS. ລາຍລະອຽດ: '+cr.error.message;return;}
+   const rows=cr.data||[];
+   const completed=rows.filter(r=>['approved','paid','completed'].includes(String(r.status||'').toLowerCase()));
+   const pending=rows.filter(r=>['pending','pending_approval','review'].includes(String(r.status||'').toLowerCase()));
+   const paid=rows.filter(r=>String(r.status||'').toLowerCase()==='paid');
+   const sales=completed.reduce((a,r)=>a+Number(r.order_total_lak||0),0);
+   const earned=rows.filter(r=>!['rejected','cancelled','void'].includes(String(r.status||'').toLowerCase())).reduce((a,r)=>a+Number(r.commission_lak||0),0);
+   const pendSum=pending.reduce((a,r)=>a+Number(r.commission_lak||0),0),paidSum=paid.reduce((a,r)=>a+Number(r.commission_lak||0),0);
+   const stats=[['💰','ຍອດຂາຍຈິງ',lak(sales)],['✅','ອໍເດີສຳເລັດ',completed.length+' ລາຍການ'],['🧮','ຄ່າຕອບແທນລວມ',lak(earned)],['⏳','ລໍຖ້າອະນຸມັດ',lak(pendSum)],['💸','ຈ່າຍແລ້ວ',lak(paidSum)]];
+   $('affDashStats').innerHTML=stats.map(x=>`<div class="feature"><div style="font-size:24px">${x[0]}</div><div class="small">${x[1]}</div><div style="font-size:20px;font-weight:850;color:var(--g);margin-top:6px">${x[2]}</div></div>`).join('');
+   $('affDashRows').innerHTML=rows.length?rows.map(r=>`<tr style="border-top:1px solid var(--line)"><td style="padding:10px">${dateVal(r.created_at)}</td><td style="padding:10px">${escAff(r.order_id||'—')}</td><td style="padding:10px">${lak(r.order_total_lak)}</td><td style="padding:10px">${lak(r.commission_lak)}</td><td style="padding:10px">${escAff(affStatus(r.status))}</td><td style="padding:10px">${dateVal(r.paid_at)}</td></tr>`).join(''):'<tr><td colspan="6" style="padding:14px;color:#6b7770">ຍັງບໍ່ມີລາຍການຂາຍອ້າງອີງ</td></tr>';
+   notice.hidden=true;content.hidden=false;
+ };
+ function affStatus(s){return ({pending:'ລໍຖ້າກວດສອບ',pending_approval:'ລໍຖ້າອະນຸມັດ',review:'ກຳລັງກວດສອບ',approved:'ອະນຸມັດແລ້ວ',paid:'ຈ່າຍແລ້ວ',rejected:'ປະຕິເສດ',cancelled:'ຍົກເລີກ',completed:'ສຳເລັດ'})[String(s||'').toLowerCase()]||s||'—'}
+ window.copyAffiliateLink=function(){const el=$('affDashLink');if(!el||!el.value)return;el.select();if(navigator.clipboard)navigator.clipboard.writeText(el.value).then(()=>toast('ຄັດລອກລິ້ງ Affiliate ແລ້ວ')).catch(()=>{document.execCommand('copy');toast('ຄັດລອກລິ້ງແລ້ວ')});else{document.execCommand('copy');toast('ຄັດລອກລິ້ງແລ້ວ')}};
 })();
 </script>
 </body></html>

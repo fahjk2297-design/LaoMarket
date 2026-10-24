@@ -14,6 +14,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for Admin Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase JS client (SQL database / auth) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <!-- HTML5 QRCode Reader library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     
@@ -64,7 +66,7 @@
                 <div>
                     <h1 class="font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
                         SmartPOS Pro
-                        <span class="text-xs font-normal bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">v2.5</span>
+                        <span class="text-xs font-normal bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">v2.6 SQL</span>
                     </h1>
                     <p class="text-xs text-slate-400" id="header-store-name">ร้านสะดวกซื้อ มินิมาร์ท พลัส</p>
                 </div>
@@ -93,6 +95,15 @@
                         <option value="la" class="bg-slate-800 text-white">🇱🇦 ລາວ (LA)</option>
                         <option value="en" class="bg-slate-800 text-white">🇬🇧 English (EN)</option>
                     </select>
+                </div>
+
+                <!-- Cloud (SQL) status -->
+                <div id="cloud-badge" class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1">
+                    <span id="cloud-dot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+                    <span id="cloud-badge-text" class="text-slate-200 font-medium max-w-[140px] truncate">Local</span>
+                    <button id="cloud-refresh-btn" onclick="cloudRefresh()" class="hidden text-sky-300 hover:text-white px-1" title="ໂຫຼດຂໍ້ມູນຈາກ SQL ໃໝ່"><i class="fa-solid fa-rotate"></i></button>
+                    <button id="cloud-login-btn" onclick="cloudShowLogin()" class="text-sky-300 hover:text-white px-1" title="ເຂົ້າສູ່ລະບົບ Cloud"><i class="fa-solid fa-right-to-bracket"></i></button>
+                    <button id="cloud-logout-btn" onclick="cloudSignOut()" class="hidden text-rose-300 hover:text-white px-1" title="ອອກຈາກລະບົບ"><i class="fa-solid fa-right-from-bracket"></i></button>
                 </div>
 
                 <!-- Scanner Status indicator -->
@@ -437,7 +448,7 @@
                                 <option value="CASH">เงินสด</option>
                                 <option value="QR">QR โอนเงิน</option>
                             </select>
-                            <button onclick="clearSalesHistory()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                            <button id="btn-clear-history" onclick="clearSalesHistory()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
                                 <i class="fa-solid fa-trash-can"></i> ล้างประวัติ
                             </button>
                         </div>
@@ -557,11 +568,11 @@
                                 <i class="fa-solid fa-upload"></i> นำเข้าข้อมูล (JSON)
                             </button>
                             <input type="file" id="import-file-input" accept="application/json" class="hidden" onchange="importData(event)">
-                            <button onclick="resetDemoData()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
+                            <button id="btn-reset-demo" onclick="resetDemoData()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
                                 <i class="fa-solid fa-rotate-left"></i> รีเซ็ตเป็นข้อมูลตัวอย่าง
                             </button>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-3">ข้อมูลทั้งหมดถูกบันทึกไว้ในเบราว์เซอร์นี้โดยอัตโนมัติ (Local Storage)</p>
+                        <p id="data-storage-note" class="text-[11px] text-slate-400 mt-3">ข้อมูลทั้งหมดถูกบันทึกไว้ในเบราว์เซอร์นี้โดยอัตโนมัติ (Local Storage)</p>
                     </div>
 
                     <!-- Backup Snapshots -->
@@ -831,6 +842,57 @@
                 <button onclick="closeReceiptModal()" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-medium text-xs shadow">
                     เริ่มบิลถัดไป <i class="fa-solid fa-arrow-right"></i>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLOUD LOGIN OVERLAY (Supabase) -->
+    <div id="cloud-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[70] hidden items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden select-text">
+            <div class="p-4 bg-slate-900 text-white flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center"><i class="fa-solid fa-cloud"></i></div>
+                <div>
+                    <h3 class="font-bold text-sm">ເຂົ້າສູ່ລະບົບ LaoMarket (SQL Cloud)</h3>
+                    <p class="text-[11px] text-slate-400">ຂໍ້ມູນສິນຄ້າ ແລະ ການຂາຍຈະເກັບໃນຖານຂໍ້ມູນ Supabase</p>
+                </div>
+            </div>
+
+            <form id="cloud-login-form" onsubmit="cloudSubmitLogin(event)" class="p-5 space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">ອີເມວ</label>
+                    <input id="cloud-email" type="email" autocomplete="username" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">ລະຫັດຜ່ານ</label>
+                    <input id="cloud-password" type="password" autocomplete="current-password" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                </div>
+
+                <details id="cloud-config-box" class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <summary class="cursor-pointer font-semibold text-slate-600">ຕັ້ງຄ່າການເຊື່ອມຕໍ່ Supabase</summary>
+                    <div class="mt-3 space-y-2">
+                        <div>
+                            <label class="block text-slate-500 mb-1">Project URL</label>
+                            <input id="cloud-url" type="url" placeholder="https://xxxx.supabase.co" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-1">Publishable key (anon)</label>
+                            <input id="cloud-key" type="text" placeholder="sb_publishable_... ຫຼື eyJ..." class="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono">
+                        </div>
+                        <p class="text-[10px] text-rose-500">ໃສ່ສະເພາະ Publishable/anon key ເທົ່ານັ້ນ. ຫ້າມໃສ່ Secret ຫຼື service_role key.</p>
+                    </div>
+                </details>
+
+                <p id="cloud-error" class="hidden text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-2"></p>
+
+                <button id="cloud-login-btn-submit" type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white py-2.5 rounded-xl font-bold">ເຂົ້າສູ່ລະບົບ</button>
+                <button type="button" onclick="cloudUseLocal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2 rounded-xl font-semibold">ໃຊ້ແບບ Offline (ເກັບໃນເຄື່ອງນີ້ເທົ່ານັ້ນ)</button>
+            </form>
+
+            <div id="cloud-shop-step" class="hidden p-5 space-y-3 text-xs">
+                <label class="block font-semibold text-slate-600">ເລືອກຮ້ານ</label>
+                <select id="cloud-shop-select" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"></select>
+                <button type="button" onclick="cloudChooseShop()" class="w-full bg-sky-600 hover:bg-sky-700 text-white py-2.5 rounded-xl font-bold">ເລີ່ມໃຊ້ງານ</button>
+                <button type="button" onclick="cloudSignOut()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2 rounded-xl font-semibold">ອອກຈາກລະບົບ</button>
             </div>
         </div>
     </div>
@@ -1182,9 +1244,608 @@
         let isAdminUnlocked = false;
 
         // ------------------------------------------------------------
+        // Cloud layer (Supabase / PostgreSQL)
+        // Products, stock, sales (receipts), void and shop settings are stored in SQL.
+        // Run schema.sql and then schema_pos_v12.sql in the Supabase SQL Editor first.
+        // ------------------------------------------------------------
+        // Fill these once, or type them in the login window (they are then remembered in this browser).
+        // Use ONLY the Publishable (anon) key here - never a Secret / service_role key.
+        const CLOUD_DEFAULTS = { url: '', key: '' };
+        const CLOUD_CFG_KEY = 'smartpos_cloud_cfg_v1';
+        const CLOUD_SHOP_KEY = 'smartpos_cloud_shop_v1';
+        const CLOUD_SALES_LIMIT = 1000;
+        const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80';
+        const CLOUD_SALE_COLS = 'id,sale_number,subtotal_lak,discount_lak,total_lak,vat_lak,payment_method,paid_lak,change_lak,status,created_at,pos_sale_items(product_id,product_name,quantity,unit_price_lak,unit_cost_lak)';
+        const CLOUD = { client: null, active: false, user: null, shop: null, shops: [], busy: false, metaTimer: null, lastMeta: '' };
+
+        function cloudEl(id) { return document.getElementById(id); }
+
+        function cloudGetCfg() {
+            try {
+                const s = JSON.parse(localStorage.getItem(CLOUD_CFG_KEY) || 'null');
+                if (s && s.url && s.key) return s;
+            } catch (e) { /* ignore */ }
+            return { url: CLOUD_DEFAULTS.url, key: CLOUD_DEFAULTS.key };
+        }
+
+        function cloudIsSecretKey(key) {
+            if (/^sb_secret_/i.test(key)) return true;
+            try {
+                const part = key.split('.')[1];
+                if (part) {
+                    const json = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+                    if (json && json.role === 'service_role') return true;
+                }
+            } catch (e) { /* not a JWT */ }
+            return false;
+        }
+
+        // Returns '' when the client is ready, otherwise a message explaining what is missing.
+        function cloudInitClient() {
+            const cfg = cloudGetCfg();
+            if (!window.supabase || !window.supabase.createClient) return 'ໂຫຼດ Supabase library ບໍ່ໄດ້ (ກວດສອບອິນເຕີເນັດ)';
+            if (!cfg.url || !cfg.key) return 'ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ Project URL ແລະ Publishable key';
+            if (cloudIsSecretKey(cfg.key)) return 'ນີ້ແມ່ນ Secret/service_role key - ຫ້າມໃຊ້ໃນເບຣາເຊີ. ໃຊ້ Publishable key ແທນ';
+            if (!/^https:\/\//i.test(cfg.url)) return 'Project URL ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍ https://';
+            CLOUD.client = window.supabase.createClient(cfg.url.replace(/\/+$/, ''), cfg.key, {
+                auth: { persistSession: true, autoRefreshToken: true }
+            });
+            return '';
+        }
+
+        // ---------- login overlay / badge ----------
+        function cloudSetError(msg) {
+            const el = cloudEl('cloud-error');
+            if (!msg) { el.classList.add('hidden'); el.textContent = ''; return; }
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        function cloudShowLogin(msg) {
+            const cfg = cloudGetCfg();
+            cloudEl('cloud-url').value = cfg.url || '';
+            cloudEl('cloud-key').value = cfg.key || '';
+            cloudEl('cloud-config-box').open = !(cfg.url && cfg.key);
+            cloudEl('cloud-login-form').classList.remove('hidden');
+            cloudEl('cloud-shop-step').classList.add('hidden');
+            cloudSetError(msg || '');
+            const ov = cloudEl('cloud-overlay');
+            ov.classList.remove('hidden');
+            ov.classList.add('flex');
+            setTimeout(() => { const e = cloudEl('cloud-email'); if (e) e.focus(); }, 50);
+        }
+
+        function cloudHideOverlay() {
+            const ov = cloudEl('cloud-overlay');
+            ov.classList.add('hidden');
+            ov.classList.remove('flex');
+        }
+
+        function cloudUpdateBadge() {
+            cloudEl('cloud-badge-text').textContent = CLOUD.active ? ('SQL · ' + CLOUD.shop.name) : 'Local';
+            cloudEl('cloud-dot').className = 'h-2 w-2 rounded-full ' + (CLOUD.active ? 'bg-emerald-400' : 'bg-slate-500');
+            cloudEl('cloud-refresh-btn').classList.toggle('hidden', !CLOUD.active);
+            cloudEl('cloud-logout-btn').classList.toggle('hidden', !CLOUD.active);
+            cloudEl('cloud-login-btn').classList.toggle('hidden', CLOUD.active);
+        }
+
+        function cloudApplyUi() {
+            cloudUpdateBadge();
+            const clr = cloudEl('btn-clear-history'); if (clr) clr.classList.add('hidden');
+            const rst = cloudEl('btn-reset-demo'); if (rst) rst.classList.add('hidden');
+            const note = cloudEl('data-storage-note');
+            if (note) note.textContent = 'ຂໍ້ມູນສິນຄ້າ ການຂາຍ ແລະ ການຕັ້ງຄ່າ ຖືກເກັບໃນຖານຂໍ້ມູນ Supabase (SQL) - ບໍ່ແມ່ນໃນເບຣາເຊີນີ້';
+            ['prod-price', 'prod-cost'].forEach(id => { const el = cloudEl(id); if (el) el.step = '1'; }); // SQL stores whole amounts
+        }
+
+        function cloudUseLocal() {
+            CLOUD.active = false;
+            cloudHideOverlay();
+            cloudUpdateBadge();
+        }
+
+        // ---------- error messages ----------
+        function cloudErrMsg(err) {
+            const m = String((err && err.message) || err || '');
+            const code = err && err.code;
+            if (code === '23505' || /duplicate key/i.test(m)) return 'ມີສິນຄ້າອື່ນໃຊ້ບາໂຄ້ດ/SKU ນີ້ຢູ່ແລ້ວ';
+            if (/Invalid login credentials/i.test(m)) return 'ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ';
+            if (/Email not confirmed/i.test(m)) return 'ອີເມວນີ້ຍັງບໍ່ໄດ້ຢືນຢັນ - ກົດລິ້ງໃນອີເມວກ່ອນ';
+            if (/account_suspended/.test(m)) return 'ບັນຊີນີ້ຖືກລະງັບ';
+            if (/no_approved_shop/.test(m)) return 'ບັນຊີນີ້ຍັງບໍ່ມີຮ້ານທີ່ໄດ້ຮັບອະນຸມັດ (ຕ້ອງໃຫ້ແອັດມິນ LaoMarket ອະນຸມັດຮ້ານກ່ອນ)';
+            if (/insufficient_stock/.test(m)) {
+                const nm = m.split(':').slice(1).join(':').trim();
+                return nm ? `ສິນຄ້າ "${nm}" ມີສະຕັອກບໍ່ພຽງພໍ` : 'ສະຕັອກບໍ່ພຽງພໍ';
+            }
+            const known = {
+                insufficient_payment: 'ຈຳນວນເງິນທີ່ຮັບມາບໍ່ຄົບຕາມຍອດ',
+                bad_discount: 'ສ່ວນຫຼຸດບໍ່ຖືກຕ້ອງ',
+                bad_quantity: 'ຈຳນວນສິນຄ້າບໍ່ຖືກຕ້ອງ',
+                product_not_found: 'ບໍ່ພົບສິນຄ້ານີ້ໃນຖານຂໍ້ມູນ (ລອງກົດໂຫຼດຂໍ້ມູນໃໝ່)',
+                shop_not_approved: 'ຮ້ານນີ້ຍັງບໍ່ໄດ້ຮັບອະນຸມັດ',
+                bad_image: 'ຮູບສິນຄ້າຕ້ອງເປັນລິ້ງ https:// (ບໍ່ເກີນ 500 ຕົວອັກສອນ)',
+                bad_numbers: 'ຕົວເລກລາຄາ/ຕົ້ນທຶນ/ສະຕັອກບໍ່ຖືກຕ້ອງ',
+                bad_name: 'ຊື່ສິນຄ້າບໍ່ຖືກຕ້ອງ',
+                empty_cart: 'ກະຕ່າສິນຄ້າວ່າງ',
+                already_voided: 'ບິນນີ້ຖືກຍົກເລີກແລ້ວ',
+                sale_not_found: 'ບໍ່ພົບບິນນີ້',
+                bad_payment: 'ວິທີຊຳລະບໍ່ຖືກຕ້ອງ'
+            };
+            for (const k in known) if (m.indexOf(k) !== -1) return known[k];
+            if (/not_authenticated|JWT|jwt/.test(m)) return 'ໝົດເວລາເຂົ້າສູ່ລະບົບ - ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່';
+            if (/does not exist|Could not find|schema cache/i.test(m)) return 'ຖານຂໍ້ມູນຍັງບໍ່ໄດ້ອັບເດດ - ກະລຸນາ run schema_pos_v12.sql ໃນ Supabase SQL Editor ກ່ອນ';
+            if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'ເຊື່ອມຕໍ່ອິນເຕີເນັດບໍ່ໄດ້';
+            return m || 'ເກີດຂໍ້ຜິດພາດ';
+        }
+
+        function cloudHandleError(err) {
+            console.error(err);
+            const msg = cloudErrMsg(err);
+            const m = String((err && err.message) || err || '');
+            if (/not_authenticated|JWT|jwt/.test(m)) { cloudShowLogin(msg); return; }
+            showToast(msg, 'error');
+        }
+
+        // ---------- sign in / out ----------
+        async function cloudSubmitLogin(e) {
+            e.preventDefault();
+            cloudSetError('');
+            const url = cloudEl('cloud-url').value.trim();
+            const key = cloudEl('cloud-key').value.trim();
+            if (key && cloudIsSecretKey(key)) {
+                cloudSetError('ນີ້ແມ່ນ Secret/service_role key - ຫ້າມໃຊ້ໃນເບຣາເຊີ. ໃຊ້ Publishable key ແທນ');
+                cloudEl('cloud-config-box').open = true;
+                return;
+            }
+            if (url && key) localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify({ url, key }));
+            const bad = cloudInitClient();
+            if (bad) { cloudSetError(bad); cloudEl('cloud-config-box').open = true; return; }
+
+            const btn = cloudEl('cloud-login-btn-submit');
+            btn.disabled = true;
+            btn.textContent = 'ກຳລັງເຂົ້າສູ່ລະບົບ...';
+            try {
+                const { data, error } = await CLOUD.client.auth.signInWithPassword({
+                    email: cloudEl('cloud-email').value.trim(),
+                    password: cloudEl('cloud-password').value
+                });
+                if (error) throw error;
+                cloudEl('cloud-password').value = '';
+                await cloudEnter(data.user, false);
+            } catch (err) {
+                console.error(err);
+                cloudSetError(cloudErrMsg(err));
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'ເຂົ້າສູ່ລະບົບ';
+            }
+        }
+
+        async function cloudSignOut() {
+            try {
+                if (CLOUD.metaTimer) { clearTimeout(CLOUD.metaTimer); await cloudFlushMeta(); }
+                if (CLOUD.client) await CLOUD.client.auth.signOut();
+            } catch (e) { console.error(e); }
+            location.reload();   // back to local mode with the browser's own data untouched
+        }
+
+        async function cloudBoot() {
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'hidden' && CLOUD.active && CLOUD.metaTimer) {
+                    clearTimeout(CLOUD.metaTimer);
+                    cloudFlushMeta();
+                }
+            });
+            cloudUpdateBadge();
+            const bad = cloudInitClient();
+            if (bad) { cloudShowLogin(window.supabase ? '' : bad); return; }
+            try {
+                const { data } = await CLOUD.client.auth.getSession();
+                if (data && data.session) { await cloudEnter(data.session.user, true); return; }
+            } catch (err) {
+                console.error(err);
+                cloudShowLogin(cloudErrMsg(err));
+                return;
+            }
+            cloudShowLogin();
+        }
+
+        async function cloudEnter(user, silent) {
+            CLOUD.user = user;
+            try {
+                const pr = await CLOUD.client.from('profiles').select('is_suspended').eq('id', user.id).maybeSingle();
+                if (pr.error) throw pr.error;
+                if (pr.data && pr.data.is_suspended) throw new Error('account_suspended');
+
+                const sh = await CLOUD.client.from('shops').select('id,name').eq('owner_id', user.id).eq('status', 'approved').order('created_at', { ascending: true });
+                if (sh.error) throw sh.error;
+                CLOUD.shops = sh.data || [];
+                if (!CLOUD.shops.length) throw new Error('no_approved_shop');
+            } catch (err) {
+                try { await CLOUD.client.auth.signOut(); } catch (e) { /* ignore */ }
+                if (silent) { cloudShowLogin(cloudErrMsg(err)); return; }
+                throw err;
+            }
+
+            const remembered = CLOUD.shops.find(s => s.id === localStorage.getItem(CLOUD_SHOP_KEY + ':' + user.id));
+            if (CLOUD.shops.length === 1) { await cloudStartShop(CLOUD.shops[0]); return; }
+            if (remembered && silent) { await cloudStartShop(remembered); return; }
+
+            cloudEl('cloud-shop-select').innerHTML = CLOUD.shops.map(s => `<option value="${escapeAttr(s.id)}">${escapeHtml(s.name)}</option>`).join('');
+            if (remembered) cloudEl('cloud-shop-select').value = remembered.id;
+            cloudEl('cloud-login-form').classList.add('hidden');
+            cloudEl('cloud-shop-step').classList.remove('hidden');
+            const ov = cloudEl('cloud-overlay');
+            ov.classList.remove('hidden');
+            ov.classList.add('flex');
+        }
+
+        async function cloudChooseShop() {
+            const shop = CLOUD.shops.find(s => s.id === cloudEl('cloud-shop-select').value);
+            if (!shop) return;
+            try { await cloudStartShop(shop); } catch (err) { cloudHandleError(err); }
+        }
+
+        async function cloudStartShop(shop) {
+            CLOUD.shop = shop;
+            try { localStorage.setItem(CLOUD_SHOP_KEY + ':' + CLOUD.user.id, shop.id); } catch (e) { /* ignore */ }
+            let hadMeta = true;
+            try {
+                hadMeta = await cloudLoadAll();
+            } catch (err) {
+                CLOUD.shop = null;
+                cloudShowLogin(cloudErrMsg(err));
+                throw err;
+            }
+            CLOUD.active = true;
+            activeCategory = 'all';
+            clearCart();
+            cloudHideOverlay();
+            cloudApplyUi();
+            fullRefresh();
+            if (!hadMeta) cloudQueueMetaSave(true);
+            showToast('ເຊື່ອມຕໍ່ SQL ສຳເລັດ: ' + shop.name);
+        }
+
+        // ---------- fetch ----------
+        async function cloudFetchProducts() {
+            const { data, error } = await CLOUD.client
+                .from('products')
+                .select('id,name,barcode,category,price_lak,stock,low_stock,image_url,status,product_costs(cost_lak)')
+                .eq('shop_id', CLOUD.shop.id)
+                .order('name', { ascending: true })
+                .range(0, 4999);
+            if (error) throw error;
+            const used = new Set();
+            return (data || []).map(r => {
+                const pc = Array.isArray(r.product_costs) ? r.product_costs[0] : r.product_costs;
+                // The POS UI uses numeric ids in its inline handlers: derive a stable number from the uuid.
+                let n = parseInt(r.id.replace(/-/g, '').slice(0, 12), 16);
+                while (used.has(n)) n++;
+                used.add(n);
+                return {
+                    id: n,
+                    uuid: r.id,
+                    name: r.name,
+                    barcode: r.barcode || '',
+                    category: r.category || 'Other',
+                    price: Number(r.price_lak) || 0,
+                    cost: pc ? (Number(pc.cost_lak) || 0) : 0,
+                    stock: r.stock || 0,
+                    lowStock: (r.low_stock === null || r.low_stock === undefined) ? null : r.low_stock,
+                    image: r.image_url || DEFAULT_PRODUCT_IMAGE,
+                    active: (r.status === 'active' || r.status === 'out_of_stock')
+                };
+            });
+        }
+
+        function cloudMapSale(s, idByUuid) {
+            const created = new Date(s.created_at);
+            const total = Number(s.total_lak) || 0;
+            const vat = Number(s.vat_lak) || 0;
+            return {
+                id: s.sale_number,
+                uuid: s.id,
+                date: created.toLocaleString('th-TH'),
+                timestamp: created.getTime(),
+                items: (s.pos_sale_items || []).map(i => ({
+                    id: idByUuid.get(i.product_id) || 0,
+                    name: i.product_name,
+                    price: Number(i.unit_price_lak) || 0,
+                    cost: (i.unit_cost_lak === null || i.unit_cost_lak === undefined) ? null : Number(i.unit_cost_lak),
+                    qty: i.quantity
+                })),
+                subtotal: total - vat,
+                vat: vat,
+                discount: Number(s.discount_lak) || 0,
+                total: total,
+                paid: Number(s.paid_lak) || 0,
+                change: Number(s.change_lak) || 0,
+                paymentMode: s.payment_method === 'cash' ? 'CASH' : 'QR',
+                voided: s.status === 'voided'
+            };
+        }
+
+        async function cloudFetchSales(prods) {
+            const idByUuid = new Map(prods.map(p => [p.uuid, p.id]));
+            const { data, error } = await CLOUD.client
+                .from('pos_sales')
+                .select(CLOUD_SALE_COLS)
+                .eq('shop_id', CLOUD.shop.id)
+                .order('created_at', { ascending: false })
+                .range(0, CLOUD_SALES_LIMIT - 1);
+            if (error) throw error;
+            return (data || []).map(s => cloudMapSale(s, idByUuid));
+        }
+
+        function cloudSyncCategories() {
+            products.forEach(p => { if (p.category && !categories.includes(p.category)) categories.push(p.category); });
+        }
+
+        // Loads everything first and only then replaces the in-memory state (all or nothing).
+        async function cloudLoadAll() {
+            const prods = await cloudFetchProducts();
+            const metaRes = await CLOUD.client.from('pos_shop_data').select('settings,categories,currencies,members').eq('shop_id', CLOUD.shop.id).maybeSingle();
+            if (metaRes.error) throw metaRes.error;
+            const meta = metaRes.data;
+            const sales = await cloudFetchSales(prods);
+
+            const base = Object.assign({}, DEFAULT_SETTINGS, { name: CLOUD.shop.name, phone: '', promptpay: '', vatRate: 0, currency: '₭' });
+            storeSettings = Object.assign(base, (meta && meta.settings) || {});
+            products = prods;
+            salesHistory = sales;
+
+            let cats = (meta && Array.isArray(meta.categories)) ? meta.categories.filter(c => typeof c === 'string' && c) : [];
+            if (!cats.length) cats = Array.from(new Set(prods.map(p => p.category).filter(Boolean)));
+            if (!cats.length) cats = [...DEFAULT_CATEGORIES];
+            categories = cats;
+            cloudSyncCategories();
+
+            currencies = (meta && Array.isArray(meta.currencies) && meta.currencies.length) ? meta.currencies : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
+            members = (meta && Array.isArray(meta.members)) ? meta.members : [];
+
+            CLOUD.lastMeta = '';
+            return !!meta;   // false = first time this shop uses the POS: settings row gets created
+        }
+
+        async function cloudReloadProducts() {
+            products = await cloudFetchProducts();
+            cloudSyncCategories();
+        }
+
+        async function cloudRefresh() {
+            if (CLOUD.busy) return;
+            CLOUD.busy = true;
+            try {
+                if (CLOUD.metaTimer) { clearTimeout(CLOUD.metaTimer); await cloudFlushMeta(); }
+                await cloudLoadAll();
+                fullRefresh();
+                showToast('ໂຫຼດຂໍ້ມູນຈາກ SQL ໃໝ່ແລ້ວ');
+            } catch (err) { cloudHandleError(err); }
+            finally { CLOUD.busy = false; }
+        }
+
+        function cloudRenderAll() {
+            renderCategoryPills();
+            renderCategoryOptions();
+            renderProducts();
+            renderCart();
+            renderAdminProductTable();
+            renderAdminSalesHistoryTable();
+            updateDashboardMetrics();
+        }
+
+        // ---------- settings / categories / currencies / members (pos_shop_data) ----------
+        function cloudQueueMetaSave(force) {
+            if (!CLOUD.active) return;
+            clearTimeout(CLOUD.metaTimer);
+            CLOUD.metaTimer = setTimeout(cloudFlushMeta, force ? 0 : 700);
+        }
+
+        async function cloudFlushMeta() {
+            CLOUD.metaTimer = null;
+            if (!CLOUD.shop) return;
+            const row = { settings: storeSettings, categories: categories, currencies: currencies, members: members };
+            const json = JSON.stringify(row);
+            if (json === CLOUD.lastMeta) return;
+            try {
+                const { error } = await CLOUD.client.from('pos_shop_data').upsert(
+                    Object.assign({ shop_id: CLOUD.shop.id, updated_at: new Date().toISOString() }, row),
+                    { onConflict: 'shop_id' }
+                );
+                if (error) throw error;
+                CLOUD.lastMeta = json;
+            } catch (err) { cloudHandleError(err); }
+        }
+
+        // ---------- products ----------
+        function cloudProductParams(p) {
+            const low = (p.lowStock === null || p.lowStock === undefined || isNaN(p.lowStock)) ? null : Math.round(p.lowStock);
+            return {
+                p_id: p.uuid || null,
+                p_shop: CLOUD.shop.id,
+                p_name: p.name,
+                p_barcode: p.barcode,
+                p_category: p.category,
+                p_price: Math.round(p.price),
+                p_cost: Math.round(p.cost || 0),
+                p_stock: Math.round(p.stock),
+                p_low_stock: low,
+                p_image: (!p.image || p.image === DEFAULT_PRODUCT_IMAGE) ? '' : p.image,
+                p_active: p.active !== false
+            };
+        }
+
+        async function cloudUpsertProduct(p) {
+            const { data, error } = await CLOUD.client.rpc('pos_save_product', cloudProductParams(p));
+            if (error) throw error;
+            return data;
+        }
+
+        async function cloudSaveProduct(p) {
+            if (CLOUD.busy) return;
+            CLOUD.busy = true;
+            try {
+                await cloudUpsertProduct(p);
+                await cloudReloadProducts();
+                closeProductModal();
+                cloudRenderAll();
+                showToast('ບັນທຶກສິນຄ້າລົງ SQL ສຳເລັດ');
+            } catch (err) { cloudHandleError(err); }
+            finally { CLOUD.busy = false; }
+        }
+
+        async function cloudToggleActive(prod) {
+            if (CLOUD.busy) return;
+            CLOUD.busy = true;
+            try {
+                await cloudUpsertProduct(Object.assign({}, prod, { active: prod.active === false }));
+                await cloudReloadProducts();
+                cloudRenderAll();
+                const now = products.find(x => x.uuid === prod.uuid);
+                showToast(now && now.active ? 'ເປີດຂາຍສິນຄ້າແລ້ວ' : 'ປິດການຂາຍສິນຄ້າແລ້ວ');
+            } catch (err) { cloudHandleError(err); }
+            finally { CLOUD.busy = false; }
+        }
+
+        async function cloudAdjustStock(prod, delta) {
+            if (CLOUD.busy) return;
+            CLOUD.busy = true;
+            try {
+                const { data, error } = await CLOUD.client.rpc('pos_adjust_stock', { p_product: prod.uuid, p_delta: delta });
+                if (error) throw error;
+                prod.stock = Number(data);
+                cloudRenderAll();
+            } catch (err) { cloudHandleError(err); }
+            finally { CLOUD.busy = false; }
+        }
+
+        async function cloudDeleteProduct(prod) {
+            if (CLOUD.busy) return;
+            CLOUD.busy = true;
+            try {
+                const { error } = await CLOUD.client.rpc('seller_delete_product', { p_id: prod.uuid });
+                if (error) throw error;
+                products = products.filter(x => x.uuid !== prod.uuid);
+                cloudRenderAll();
+                showToast('ລຶບສິນຄ້າອອກຈາກ SQL ແລ້ວ');
+            } catch (err) { cloudHandleError(err); }
+            finally { CLOUD.busy = false; }
+        }
+
+        // ---------- sales ----------
+        async function cloudCheckout(totals, paidAmount) {
+            if (CLOUD.busy) return;
+            CLOUD.busy = true;
+            try {
+                const items = currentCart.map(ci => {
+                    const p = products.find(x => x.id === ci.id);
+                    if (!p || !p.uuid) throw new Error('product_not_found');
+                    return { id: p.uuid, qty: ci.qty };
+                });
+                const isCash = currentPaymentMode === 'CASH';
+                const { data, error } = await CLOUD.client.rpc('pos_checkout', {
+                    p_shop: CLOUD.shop.id,
+                    p_items: items,
+                    p_payment: isCash ? 'cash' : 'qr',
+                    p_paid: isCash ? Math.round(paidAmount) : null,
+                    p_discount: Math.round(totals.discount),
+                    p_vat_rate: parseFloat(storeSettings.vatRate) || 0
+                });
+                if (error) throw error;
+
+                // Use the receipt exactly as stored in SQL (server prices); fall back to the cart if the read fails.
+                let order = null;
+                try {
+                    const r = await CLOUD.client.from('pos_sales').select(CLOUD_SALE_COLS).eq('id', data.sale_id).single();
+                    if (!r.error) order = cloudMapSale(r.data, new Map(products.map(p => [p.uuid, p.id])));
+                } catch (e) { /* use fallback below */ }
+                if (!order) {
+                    const now = new Date();
+                    order = {
+                        id: data.sale_number, uuid: data.sale_id,
+                        date: now.toLocaleString('th-TH'), timestamp: now.getTime(),
+                        items: currentCart.map(i => ({ id: i.id, name: i.name, price: i.price, cost: i.cost || 0, qty: i.qty })),
+                        subtotal: Number(data.total) - Number(data.vat), vat: Number(data.vat),
+                        discount: Number(data.discount), total: Number(data.total),
+                        paid: Number(data.paid), change: Number(data.change),
+                        paymentMode: currentPaymentMode, voided: false
+                    };
+                }
+                salesHistory.unshift(order);
+                closePaymentModal();
+                openReceiptModal(order);
+                clearCart();
+                try { await cloudReloadProducts(); } catch (e) { console.error(e); }
+                cloudRenderAll();
+                showToast(t('msg_pay_success'));
+            } catch (err) {
+                cloudHandleError(err);
+                try { await cloudReloadProducts(); renderProducts(); } catch (e) { /* ignore */ }
+            } finally { CLOUD.busy = false; }
+        }
+
+        async function cloudVoidSale(order) {
+            if (CLOUD.busy) return;
+            CLOUD.busy = true;
+            try {
+                const { error } = await CLOUD.client.rpc('pos_void_sale', { p_sale: order.uuid });
+                if (error) throw error;
+                order.voided = true;
+                await cloudReloadProducts();
+                cloudRenderAll();
+                showToast('ຍົກເລີກບິນ ແລະ ຄືນສະຕັອກໃນ SQL ແລ້ວ');
+            } catch (err) {
+                if (/already_voided/.test(String((err && err.message) || ''))) { order.voided = true; cloudRenderAll(); }
+                cloudHandleError(err);
+            } finally { CLOUD.busy = false; }
+        }
+
+        // ---------- import (products by barcode, categories, currencies, members, settings) ----------
+        async function cloudImport(data) {
+            if (CLOUD.busy) { showToast('ກຳລັງປະມວນຜົນ... ລອງໃໝ່ອີກຄັ້ງ', 'error'); return; }
+            if (!confirm('ນຳເຂົ້າສິນຄ້າຈາກໄຟລ໌ເຂົ້າ SQL? ສິນຄ້າທີ່ບາໂຄ້ດຕົງກັນຈະຖືກອັບເດດ, ປະຫວັດການຂາຍໃນໄຟລ໌ຈະບໍ່ຖືກນຳເຂົ້າ.')) return;
+            CLOUD.busy = true;
+            let ok = 0, fail = 0;
+            try {
+                showToast('ກຳລັງນຳເຂົ້າ... ກະລຸນາລໍຖ້າ');
+                for (const raw of data.products) {
+                    const barcode = String(raw.barcode || '').trim();
+                    const name = String(raw.name || '').trim();
+                    if (!name || !barcode) { fail++; continue; }
+                    const existing = products.find(x => x.barcode === barcode);
+                    const low = (raw.lowStock === null || raw.lowStock === undefined || raw.lowStock === '') ? null : parseInt(raw.lowStock, 10);
+                    try {
+                        await cloudUpsertProduct({
+                            uuid: existing ? existing.uuid : null, name, barcode,
+                            category: raw.category || 'Other',
+                            price: Math.max(0, parseFloat(raw.price) || 0),
+                            cost: Math.max(0, parseFloat(raw.cost) || 0),
+                            stock: Math.max(0, parseInt(raw.stock, 10) || 0),
+                            lowStock: isNaN(low) ? null : low,
+                            image: (typeof raw.image === 'string' && /^https:\/\//i.test(raw.image)) ? raw.image : '',
+                            active: raw.active !== false
+                        });
+                        ok++;
+                    } catch (e) { console.error(e); fail++; }
+                }
+                if (Array.isArray(data.categories)) data.categories.forEach(c => { if (typeof c === 'string' && c.trim() && !categories.includes(c.trim())) categories.push(c.trim()); });
+                if (Array.isArray(data.currencies) && data.currencies.length) currencies = data.currencies;
+                if (Array.isArray(data.members)) members = data.members;
+                if (data.storeSettings && typeof data.storeSettings === 'object') storeSettings = keepAdminSecurity(Object.assign({}, storeSettings, data.storeSettings));
+                await cloudReloadProducts();
+                cloudQueueMetaSave(true);
+                fullRefresh();
+                showToast(`ນຳເຂົ້າສຳເລັດ ${ok} ລາຍການ` + (fail ? ` (ຂ້າມ/ຜິດພາດ ${fail})` : ''), fail ? 'error' : 'success');
+            } catch (err) { cloudHandleError(err); }
+            finally { CLOUD.busy = false; }
+        }
+
+        // ------------------------------------------------------------
         // Persistence
         // ------------------------------------------------------------
         function saveState() {
+            if (CLOUD.active) { cloudQueueMetaSave(); return; }   // cloud mode: settings go to SQL, local data untouched
             try {
                 const payload = { products, categories, salesHistory, storeSettings, currencies, members };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -1228,6 +1889,7 @@
         }
 
         function resetDemoData() {
+            if (CLOUD.active) { showToast('ໂໝດ Cloud ບໍ່ຮອງຮັບການຣີເຊັດເປັນຂໍ້ມູນຕົວຢ່າງ (ປ້ອງກັນຂໍ້ມູນຈິງໃນ SQL ຫາຍ)', 'error'); return; }
             if (!confirm('ต้องการรีเซ็ตข้อมูลทั้งหมด (สินค้า/ประวัติการขาย/การตั้งค่า) กลับเป็นข้อมูลตัวอย่างหรือไม่? ระบบจะสำรองข้อมูลปัจจุบันไว้ให้ก่อน และสามารถกู้คืนได้ภายหลังจากส่วน "สำรองข้อมูล"')) return;
             createBackupSnapshot(true, 'สำรองอัตโนมัติก่อนรีเซ็ตข้อมูล');
             localStorage.removeItem(STORAGE_KEY);
@@ -1267,6 +1929,7 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     if (!Array.isArray(data.products)) throw new Error('invalid format');
+                    if (CLOUD.active) { cloudImport(data).finally(() => { event.target.value = ''; }); return; }
                     createBackupSnapshot(true, 'สำรองอัตโนมัติก่อนนำเข้าข้อมูล');
                     products = data.products;
                     categories = Array.isArray(data.categories) && data.categories.length ? data.categories : [...DEFAULT_CATEGORIES];
@@ -1416,6 +2079,7 @@
             const backup = backups.find(b => b.id === id);
             if (!backup) return;
 
+            if (CLOUD.active) { showToast('ໂໝດ Cloud ບໍ່ຮອງຮັບການກູ້ຄືນຈາກ Snapshot ໃນເຄື່ອງ — ໃຊ້ "ນຳເຂົ້າຂໍ້ມູນ (JSON)" ແທນ', 'error'); return; }
             if (!confirm(`ต้องการกู้คืนข้อมูล ณ วันที่ ${backup.dateLabel} หรือไม่? ข้อมูลปัจจุบันในระบบจะถูกแทนที่ (แนะนำให้สำรองข้อมูลปัจจุบันก่อนกู้คืน)`)) return;
 
             products = JSON.parse(JSON.stringify(backup.data.products));
@@ -1943,7 +2607,7 @@
         // ------------------------------------------------------------
         // Application Initialization
         // ------------------------------------------------------------
-        window.onload = function() {
+        window.onload = async function() {
             loadState();
             initClock();
             renderCategoryPills();
@@ -1959,6 +2623,7 @@
             renderWalletList();
             checkAutoBackup();
             changeLanguage('th');
+            await cloudBoot();   // connect to Supabase (login) or fall back to local mode
         };
 
         // ------------------------------------------------------------
@@ -2177,7 +2842,7 @@
         function applyDiscount(value) {
             let val = parseFloat(value);
             if (isNaN(val) || val < 0) val = 0;
-            currentDiscount = val;
+            currentDiscount = CLOUD.active ? Math.round(val) : val;
             renderCart();
         }
 
@@ -2447,6 +3112,8 @@
                 changeAmount = paidAmount - total;
             }
 
+            if (CLOUD.active) { cloudCheckout(totals, paidAmount); return; }   // server-side stock + receipt
+
             // Validate & deduct inventory stock
             for (const cartItem of currentCart) {
                 const prod = products.find(p => p.id === cartItem.id);
@@ -2593,6 +3260,7 @@
             if (!prod) return;
             const newStock = prod.stock + delta;
             if (newStock < 0) return;
+            if (CLOUD.active) { cloudAdjustStock(prod, delta); return; }
             prod.stock = newStock;
             saveState();
             renderAdminProductTable();
@@ -2603,6 +3271,7 @@
         function toggleProductActive(id) {
             const prod = products.find(p => p.id === id);
             if (!prod) return;
+            if (CLOUD.active) { cloudToggleActive(prod); return; }
             prod.active = prod.active === false ? true : false;
             saveState();
             renderAdminProductTable();
@@ -2673,6 +3342,12 @@
                 return;
             }
 
+            if (CLOUD.active) {
+                const existing = id ? products.find(p => String(p.id) === String(id)) : null;
+                cloudSaveProduct({ uuid: existing ? existing.uuid : null, name, barcode, category, price, cost, stock, lowStock, image, active });
+                return;
+            }
+
             if (id) {
                 const idx = products.findIndex(p => String(p.id) === String(id));
                 if (idx !== -1) products[idx] = { id: products[idx].id, name, barcode, category, price, cost, stock, lowStock, image, active };
@@ -2696,6 +3371,7 @@
             const prod = products.find(p => p.id === id);
             if (!prod) return;
             if (!confirm(`ต้องการลบสินค้า "${prod.name}" ใช่หรือไม่?`)) return;
+            if (CLOUD.active) { cloudDeleteProduct(prod); return; }
             products = products.filter(p => p.id !== id);
             saveState();
             renderAdminProductTable();
@@ -2758,6 +3434,8 @@
             if (!order || order.voided) return;
             if (!confirm(`ต้องการยกเลิกบิล ${orderId} และคืนสินค้าเข้าสต็อกหรือไม่?`)) return;
 
+            if (CLOUD.active) { cloudVoidSale(order); return; }
+
             order.items.forEach(item => {
                 const prod = products.find(p => p.id === item.id);
                 if (prod) prod.stock += item.qty;
@@ -2773,6 +3451,7 @@
         }
 
         function clearSalesHistory() {
+            if (CLOUD.active) { showToast('ໂໝດ Cloud ບໍ່ອະນຸຍາດໃຫ້ລຶບປະຫວັດການຂາຍ (ເກັບເປັນຫຼັກຖານບັນຊີ) — ໃຊ້ "ຍົກເລີກບິນ" ແທນ', 'error'); return; }
             if (!confirm('ต้องการล้างประวัติการขายทั้งหมดหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
             salesHistory = [];
             saveState();

@@ -1,1 +1,3020 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPOS Pro - ระบบบริหารจัดการหน้าร้าน</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Prompt & Noto Sans Lao -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js for Admin Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- HTML5 QRCode Reader library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'Noto Sans Lao', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Prompt', 'Noto Sans Lao', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #printable-receipt, #printable-receipt * { visibility: visible; }
+            #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 20px; }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased select-none">
 
+    <!-- Top Bar Navigation -->
+    <header class="bg-slate-900 text-white shrink-0 shadow-md z-30">
+        <div class="px-4 py-2.5 flex items-center justify-between">
+            <!-- Logo & Store Name -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
+                        SmartPOS Pro
+                        <span class="text-xs font-normal bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">v2.5</span>
+                    </h1>
+                    <p class="text-xs text-slate-400" id="header-store-name">ร้านสะดวกซื้อ มินิมาร์ท พลัส</p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher Tabs -->
+            <nav class="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
+                <button id="nav-pos-btn" onclick="switchTab('pos')" class="flex items-center space-x-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-sky-600 text-white shadow-sm">
+                    <i class="fa-solid fa-cash-register"></i>
+                    <span data-i18n="nav_pos">ระบบขายหน้าร้าน (POS)</span>
+                </button>
+                <button id="nav-admin-btn" onclick="switchTab('admin')" class="flex items-center space-x-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span data-i18n="nav_admin">ระบบแอดมิน (Admin)</span>
+                </button>
+            </nav>
+
+            <!-- Status Indicator, Language Switcher & Info -->
+            <div class="flex items-center space-x-3 text-xs">
+                
+                <!-- Language Switcher Selector -->
+                <div class="relative bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-globe text-sky-400"></i>
+                    <select id="lang-select" onchange="changeLanguage(this.value)" class="bg-transparent text-slate-200 text-xs font-medium focus:outline-none cursor-pointer">
+                        <option value="th" class="bg-slate-800 text-white">🇹🇭 ไทย (TH)</option>
+                        <option value="la" class="bg-slate-800 text-white">🇱🇦 ລາວ (LA)</option>
+                        <option value="en" class="bg-slate-800 text-white">🇬🇧 English (EN)</option>
+                    </select>
+                </div>
+
+                <!-- Scanner Status indicator -->
+                <div class="hidden md:flex items-center space-x-2 bg-emerald-950/60 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-lg" title="Scanner Ready">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span data-i18n="scanner_status">Scanner Connected</span>
+                </div>
+
+                <div class="text-right hidden sm:block">
+                    <div class="font-medium text-slate-200" id="current-time">00:00:00</div>
+                    <div class="text-slate-400 text-[11px]" id="current-date">--/--/----</div>
+                </div>
+
+                <div class="flex items-center space-x-2 border-l border-slate-700 pl-3">
+                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-sky-400 border border-slate-600">
+                        A
+                    </div>
+                    <div class="hidden lg:block text-left">
+                        <div class="font-medium text-slate-200 text-xs" data-i18n="cashier_name">แคชเชียร์ สมชาย</div>
+                        <div class="text-[10px] text-slate-400">Shift #012</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 overflow-hidden relative">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: POS FRONT-END COUNTER -->
+        <!-- ========================================== -->
+        <section id="tab-pos" class="h-full flex flex-col md:flex-row overflow-hidden">
+            
+            <!-- Left Side: Catalog & Search & Scanner Controls -->
+            <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100 border-r border-slate-200">
+                
+                <!-- Search & Action Bar -->
+                <div class="p-3 bg-white border-b border-slate-200 shadow-sm flex flex-wrap gap-2 items-center">
+                    <!-- Search Box & Hardware Scanner Input -->
+                    <div class="relative flex-1 min-w-[240px]">
+                        <i class="fa-solid fa-barcode absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                        <input type="text" id="barcode-input" placeholder="สแกนบาร์โค้ด หรือ พิมพ์ชื่อสินค้า/SKU..." 
+                               class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition-all shadow-inner"
+                               autocomplete="off" autofocus>
+                        <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </button>
+                    </div>
+
+                    <!-- Mobile Camera Scanner Button -->
+                    <button onclick="openCameraScanner()" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center space-x-2 shadow-sm transition-all hover:shadow">
+                        <i class="fa-solid fa-camera"></i>
+                        <span class="hidden sm:inline" data-i18n="btn_scan_camera">สแกนด้วยกล้องมือถือ</span>
+                    </button>
+                </div>
+
+                <!-- Category Pills Filter -->
+                <div class="px-3 py-2 bg-white border-b border-slate-200 flex items-center space-x-2 overflow-x-auto custom-scrollbar" id="category-pills">
+                    <!-- Dynamic category pills with i18n -->
+                </div>
+
+                <!-- Product Grid -->
+                <div class="flex-1 p-3 overflow-y-auto custom-scrollbar">
+                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                        <!-- Products will be dynamically populated -->
+                    </div>
+                    <div id="no-products-msg" class="hidden flex flex-col items-center justify-center h-64 text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-4xl mb-3 text-slate-300"></i>
+                        <p class="text-sm" data-i18n="no_products">ไม่พบรายการสินค้าที่ตรงกัน</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Order Cart & Bill -->
+            <div class="w-full md:w-[380px] lg:w-[420px] bg-white h-full flex flex-col shadow-xl z-10 shrink-0 border-l border-slate-200">
+                
+                <!-- Cart Header -->
+                <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-sm" data-i18n="cart_title">รายการสั่งซื้อปัจจุบัน</h2>
+                            <p class="text-[11px] text-slate-500" id="cart-order-id">บิลเลขที่: #ORD-20260910-001</p>
+                        </div>
+                    </div>
+                    <button onclick="clearCart()" class="text-xs text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg transition-colors font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i> <span data-i18n="btn_clear_cart">ล้างตะกร้า</span>
+                    </button>
+                </div>
+
+                <!-- Cart Items List -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-3 divide-y divide-slate-100" id="cart-items-container">
+                    <!-- Cart items rendered here -->
+                </div>
+
+                <!-- Empty Cart State -->
+                <div id="cart-empty-state" class="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3 text-slate-300 text-2xl">
+                        <i class="fa-solid fa-basket-shopping"></i>
+                    </div>
+                    <p class="font-medium text-slate-600 text-sm" data-i18n="cart_empty_title">ยังไม่มีสินค้าในตะกร้า</p>
+                    <p class="text-xs text-slate-400 mt-1" data-i18n="cart_empty_sub">คลิกเลือกสินค้า หรือสแกนบาร์โค้ดเพื่อเริ่มรายการ</p>
+                </div>
+
+                <!-- Bill Totals & Checkout -->
+                <div class="p-4 bg-slate-900 text-white rounded-t-2xl shadow-2xl space-y-3">
+                    <div class="space-y-1.5 text-xs text-slate-300">
+                        <div class="flex justify-between">
+                            <span data-i18n="lbl_subtotal">ราคารวม (Subtotal)</span>
+                            <span id="summary-subtotal" class="font-mono">฿0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span data-i18n="lbl_vat">ภาษีมูลค่าเพิ่ม (VAT 7%)</span>
+                            <span id="summary-vat" class="font-mono">฿0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center text-emerald-400">
+                            <span data-i18n="lbl_discount">ส่วนลดพิเศษ (Discount)</span>
+                            <div class="flex items-center gap-1">
+                                <span>-</span>
+                                <input type="number" id="discount-input" min="0" value="0" step="0.5"
+                                       oninput="applyDiscount(this.value)"
+                                       class="w-16 bg-slate-800 border border-slate-700 rounded-md px-1.5 py-0.5 text-right text-emerald-400 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-baseline">
+                        <span class="text-sm font-semibold text-slate-200" data-i18n="lbl_total">ยอดสุทธิ (Total)</span>
+                        <div class="text-right">
+                            <span id="summary-total" class="text-2xl font-bold font-mono text-sky-400">฿0.00</span>
+                            <div class="text-[10px] text-slate-400" id="summary-item-count">0 รายการ</div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Trigger Buttons -->
+                    <div class="grid grid-cols-2 gap-2 pt-2">
+                        <button onclick="openPaymentModal('CASH')" id="btn-pay-cash" disabled class="disabled:opacity-40 disabled:cursor-not-allowed bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white py-3 px-3 rounded-xl font-semibold text-sm flex flex-col items-center justify-center shadow-lg transition-all">
+                            <i class="fa-solid fa-money-bill-wave text-base mb-0.5"></i>
+                            <span data-i18n="btn_pay_cash">รับเงินสด (Cash)</span>
+                        </button>
+                        <button onclick="openPaymentModal('QR')" id="btn-pay-qr" disabled class="disabled:opacity-40 disabled:cursor-not-allowed bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white py-3 px-3 rounded-xl font-semibold text-sm flex flex-col items-center justify-center shadow-lg transition-all">
+                            <i class="fa-solid fa-qrcode text-base mb-0.5"></i>
+                            <span data-i18n="btn_pay_qr">สแกน QR โอนเงิน</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: ADMIN BACK-OFFICE SYSTEM -->
+        <!-- ========================================== -->
+        <section id="tab-admin" class="h-full hidden flex-col md:flex-row overflow-hidden bg-slate-100">
+            
+            <!-- Admin Sidebar -->
+            <aside class="w-full md:w-60 bg-white border-r border-slate-200 shrink-0 flex flex-col">
+                <div class="p-4 border-b border-slate-200">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400" data-i18n="admin_menu_title">เมนูผู้ดูแลระบบ</p>
+                </div>
+                <nav class="p-2 space-y-1 flex-1">
+                    <button onclick="switchAdminSubtab('dashboard')" id="admin-menu-dashboard" class="admin-nav-btn active w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-sky-600 bg-sky-50 transition-all">
+                        <i class="fa-solid fa-chart-pie w-5 text-center text-sm"></i>
+                        <span data-i18n="admin_tab_dashboard">สรุปยอดรายรับ & แดชบอร์ด</span>
+                    </button>
+                    <button onclick="switchAdminSubtab('products')" id="admin-menu-products" class="admin-nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-boxes-stacked w-5 text-center text-sm"></i>
+                        <span data-i18n="admin_tab_products">จัดการสินค้า & สต็อก</span>
+                    </button>
+                    <button onclick="switchAdminSubtab('history')" id="admin-menu-history" class="admin-nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-clock-rotate-left w-5 text-center text-sm"></i>
+                        <span data-i18n="admin_tab_history">ประวัติการขาย & ใบเสร็จ</span>
+                    </button>
+                    <button onclick="switchAdminSubtab('settings')" id="admin-menu-settings" class="admin-nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-gear w-5 text-center text-sm"></i>
+                        <span data-i18n="admin_tab_settings">ตั้งค่าร้านค้า & QR</span>
+                    </button>
+
+                    <div class="pt-3 mt-3 border-t border-slate-100">
+                        <p class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">ການເງິນ</p>
+                    </div>
+                    <button onclick="switchAdminSubtab('wallets')" id="admin-menu-wallets" class="admin-nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <i class="fa-solid fa-wallet w-5 text-center text-sm"></i>
+                        <span>ສະກຸນເງິນ & ກະເປົ໋າເງິນ</span>
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- Admin Subtab Contents -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6">
+
+                <!-- SUBTAB: Dashboard Analytics -->
+                <div id="admin-subtab-dashboard" class="space-y-6">
+                    
+                    <!-- Top Metric Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">ยอดขายรวมวันนี้</p>
+                                <h3 class="text-2xl font-bold text-slate-800 font-mono" id="stat-today-revenue">฿0.00</h3>
+                                <p class="text-[11px] text-emerald-600 mt-0.5"><i class="fa-solid fa-arrow-trend-up"></i> อัปเดตเรียลไทม์</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl shrink-0">
+                                <i class="fa-solid fa-bag-shopping"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">จำนวนบิลที่ขายได้</p>
+                                <h3 class="text-2xl font-bold text-slate-800 font-mono" id="stat-today-orders">0 บิล</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">เฉลี่ย <span id="stat-avg-order">฿0.00</span> / บิล</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl shrink-0">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">สินค้าสต็อกต่ำ (< 5)</p>
+                                <h3 class="text-2xl font-bold text-amber-600 font-mono" id="stat-low-stock-count">0 รายการ</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">ต้องเติมสต็อกด่วน</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shrink-0">
+                                <i class="fa-solid fa-percent"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 font-medium">กำไรขั้นต้นประเมิน</p>
+                                <h3 class="text-2xl font-bold text-slate-800 font-mono" id="stat-profit-estimate">฿0.00</h3>
+                                <p class="text-[11px] text-indigo-600 mt-0.5">Margin ~32%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Revenue Bar Chart -->
+                        <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-sm">กราฟสรุปยอดขายรายวัน (7 วันล่าสุด)</h3>
+                                    <p class="text-xs text-slate-400">เปรียบเทียบยอดขายรวมในแต่ละวัน</p>
+                                </div>
+                                <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">บาท (THB)</span>
+                            </div>
+                            <div class="h-64 relative">
+                                <canvas id="chart-sales-trend"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method Breakdown Doughnut -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm mb-1">สัดส่วนช่องทางชำระเงิน</h3>
+                                <p class="text-xs text-slate-400 mb-4">เงินสด vs QR โอนเงิน</p>
+                                <div class="h-52 relative flex items-center justify-center">
+                                    <canvas id="chart-payment-breakdown"></canvas>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex justify-around text-xs">
+                                <div class="text-center">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-emerald-500 mr-1"></span>
+                                    <span class="text-slate-600">เงินสด: <strong id="pay-cash-total">฿0</strong></span>
+                                </div>
+                                <div class="text-center">
+                                    <span class="inline-block w-3 h-3 rounded-full bg-sky-500 mr-1"></span>
+                                    <span class="text-slate-600">QR โอน: <strong id="pay-qr-total">฿0</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: Product Management -->
+                <div id="admin-subtab-products" class="hidden space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div>
+                            <h3 class="font-bold text-slate-800">รายการสินค้าในระบบทั้งหมด</h3>
+                            <p class="text-xs text-slate-500">จัดการข้อมูล ราคาสินค้า SKU/บาร์โค้ด และสต็อกคงเหลือ</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input type="text" id="admin-product-search" oninput="renderAdminProductTable()" placeholder="ค้นหาชื่อ/บาร์โค้ด..." class="pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs w-56 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            </div>
+                            <select id="admin-product-filter-cat" onchange="renderAdminProductTable()" class="p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs"></select>
+                            <button onclick="openProductModal()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow transition-all">
+                                <i class="fa-solid fa-plus"></i> เพิ่มสินค้าใหม่
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Products Table -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-600">
+                                <thead class="bg-slate-50 border-b border-slate-200 font-semibold text-slate-700 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-3.5">รูปภาพ</th>
+                                        <th class="p-3.5">ชื่อสินค้า</th>
+                                        <th class="p-3.5">บาร์โค้ด / SKU</th>
+                                        <th class="p-3.5">หมวดหมู่</th>
+                                        <th class="p-3.5 text-right">ราคาขาย</th>
+                                        <th class="p-3.5 text-center">คงเหลือ (Stock)</th>
+                                        <th class="p-3.5 text-center">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-product-table-body" class="divide-y divide-slate-100">
+                                    <!-- Dynamic product rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: Sales History & Orders -->
+                <div id="admin-subtab-history" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold text-slate-800">ประวัติรายการขายทั้งหมด</h3>
+                            <p class="text-xs text-slate-500">ตรวจสอบบิลขายย้อนหลัง พิมพ์ใบเสร็จซ้ำ หรือยกเลิกรายการ</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input type="text" id="admin-history-search" oninput="renderAdminSalesHistoryTable()" placeholder="ค้นหาเลขที่บิล..." class="pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs w-48 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            </div>
+                            <select id="admin-history-filter-pay" onchange="renderAdminSalesHistoryTable()" class="p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs">
+                                <option value="all">ทุกช่องทาง</option>
+                                <option value="CASH">เงินสด</option>
+                                <option value="QR">QR โอนเงิน</option>
+                            </select>
+                            <button onclick="clearSalesHistory()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                                <i class="fa-solid fa-trash-can"></i> ล้างประวัติ
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-600">
+                                <thead class="bg-slate-50 border-b border-slate-200 font-semibold text-slate-700 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-3.5">เลขที่บิล</th>
+                                        <th class="p-3.5">วัน-เวลา</th>
+                                        <th class="p-3.5">ช่องทางชำระ</th>
+                                        <th class="p-3.5 text-right">ยอดรวมสุทธิ</th>
+                                        <th class="p-3.5 text-center">สถานะ</th>
+                                        <th class="p-3.5 text-center">แอ็กชัน</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-history-table-body" class="divide-y divide-slate-100">
+                                    <!-- History rows dynamically added -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: Settings -->
+                <div id="admin-subtab-settings" class="hidden space-y-6">
+
+                    <!-- Store Info & Receipt Settings -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2">ตั้งค่าร้านค้า & ใบเสร็จ</h3>
+                        <form onsubmit="saveSettings(event)" class="space-y-4 text-xs">
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">ชื่อร้านค้า (แสดงบนใบเสร็จ)</label>
+                                <input type="text" id="setting-store-name" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">เบอร์โทรศัพท์ร้าน</label>
+                                <input type="text" id="setting-store-phone" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">หมายเลข PromptPay (สำหรับสร้าง QR Code ชำระเงิน)</label>
+                                <input type="text" id="setting-promptpay" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">ข้อความท้ายใบเสร็จ</label>
+                                <input type="text" id="setting-receipt-footer" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block font-medium text-slate-700 mb-1">อัตราภาษี VAT (%)</label>
+                                    <input type="number" step="0.1" min="0" max="100" id="setting-vat-rate" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                                </div>
+                                <div>
+                                    <label class="block font-medium text-slate-700 mb-1">แจ้งเตือนสต็อกต่ำที่</label>
+                                    <input type="number" min="0" id="setting-low-stock" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                                </div>
+                                <div>
+                                    <label class="block font-medium text-slate-700 mb-1">สัญลักษณ์สกุลเงิน</label>
+                                    <input type="text" maxlength="3" id="setting-currency" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                                </div>
+                            </div>
+                            <div class="pt-2">
+                                <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow">
+                                    <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกการตั้งค่า
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Category Management -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2">จัดการหมวดหมู่สินค้า</h3>
+                        <div class="flex flex-wrap gap-2 mb-4" id="category-manager-list"></div>
+                        <form onsubmit="addCategory(event)" class="flex gap-2 text-xs">
+                            <input type="text" id="new-category-input" placeholder="ชื่อหมวดหมู่ใหม่..." required class="flex-1 p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl font-semibold shadow shrink-0">
+                                <i class="fa-solid fa-plus mr-1"></i> เพิ่มหมวดหมู่
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Admin Security -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-key text-sky-600"></i> ລະຫັດຜ່ານຫນ້າແອັດມິນ</h3>
+                        <form onsubmit="changeAdminPassword(event)" class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-medium text-slate-700 mb-1">ລະຫັດຜ່ານປັດຈຸບັນ</label>
+                                <input type="password" id="setting-admin-current-pw" autocomplete="current-password" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-medium text-slate-700 mb-1">ລະຫັດຜ່ານໃໝ່ (ຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ)</label>
+                                    <input type="password" id="setting-admin-new-pw" autocomplete="new-password" minlength="6" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                                </div>
+                                <div>
+                                    <label class="block font-medium text-slate-700 mb-1">ຢືນຢັນລະຫັດຜ່ານໃໝ່</label>
+                                    <input type="password" id="setting-admin-confirm-pw" autocomplete="new-password" minlength="6" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>ຖ້າລືມລະຫັດຜ່ານ ໃຫ້ຕິດຕໍ່ແອັດມິນຫຼັກຂອງ LaoMarket ເພື່ອຂໍປ່ຽນລະຫັດຜ່ານໃໝ່</p>
+                            <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow">
+                                <i class="fa-solid fa-lock mr-1"></i> ປ່ຽນລະຫັດຜ່ານ
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Data Management -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2">การจัดการข้อมูลระบบ</h3>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <button onclick="exportData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
+                                <i class="fa-solid fa-download"></i> ส่งออกข้อมูลระบบ (JSON)
+                            </button>
+                            <button onclick="document.getElementById('import-file-input').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
+                                <i class="fa-solid fa-upload"></i> นำเข้าข้อมูล (JSON)
+                            </button>
+                            <input type="file" id="import-file-input" accept="application/json" class="hidden" onchange="importData(event)">
+                            <button onclick="resetDemoData()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
+                                <i class="fa-solid fa-rotate-left"></i> รีเซ็ตเป็นข้อมูลตัวอย่าง
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-3">ข้อมูลทั้งหมดถูกบันทึกไว้ในเบราว์เซอร์นี้โดยอัตโนมัติ (Local Storage)</p>
+                    </div>
+
+                    <!-- Backup Snapshots -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
+                        <div class="flex items-center justify-between border-b pb-2 mb-4">
+                            <h3 class="font-bold text-slate-800 text-base">สำรองข้อมูล (Backup Snapshots)</h3>
+                            <button onclick="createBackupSnapshot(false)" class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                                <i class="fa-solid fa-clock-rotate-left"></i> สำรองข้อมูลตอนนี้
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mb-1" id="last-backup-info">ยังไม่มีการสำรองข้อมูล</p>
+                        <p class="text-[11px] text-slate-400 mb-3">ระบบจะสำรองข้อมูลอัตโนมัติให้ทุกวัน (เก็บย้อนหลังสูงสุด <span id="max-backup-count">10</span> ชุด) คุณสามารถกู้คืนข้อมูลจากจุดใดก็ได้ด้านล่าง</p>
+                        <div id="backup-list" class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+                            <!-- Dynamic backup rows -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: Currency & Wallets -->
+                <div id="admin-subtab-wallets" class="hidden space-y-6">
+                    <!-- Currency management -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-coins text-amber-500"></i> ສ້າງ / ຈັດການສະກຸນເງິນ</h3>
+                        <form onsubmit="addCurrency(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs items-end">
+                            <div>
+                                <label class="block text-slate-500 mb-1">ລະຫັດສະກຸນເງິນ</label>
+                                <input type="text" id="curr-code" placeholder="ເຊັ່ນ LAK, THB, PT" required maxlength="6" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl uppercase">
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">ຊື່ສະກຸນເງິນ</label>
+                                <input type="text" id="curr-name" placeholder="ເຊັ່ນ ກີບລາວ" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">ສັນຍາລັກ</label>
+                                <input type="text" id="curr-symbol" placeholder="₭" maxlength="3" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">ອັດຕາທຽບເທົ່າ 1 ໜ່ວຍ = ? LAK</label>
+                                <input type="number" step="0.0001" min="0" id="curr-rate" value="1" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                            </div>
+                            <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow h-fit">
+                                <i class="fa-solid fa-plus mr-1"></i> ເພີ່ມສະກຸນເງິນ
+                            </button>
+                        </form>
+                        <p class="text-[11px] text-slate-400 mt-2">* ໃຊ້ ກີບລາວ (LAK) ເປັນສະກຸນເງິນຫຼັກ (Base Currency) ອັດຕາ = 1 ສະເໝີ</p>
+                        <div class="overflow-x-auto mt-4">
+                            <table class="w-full text-xs text-left">
+                                <thead class="text-slate-400 uppercase text-[10px] border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-2 pr-3">ລະຫັດ</th>
+                                        <th class="py-2 pr-3">ຊື່</th>
+                                        <th class="py-2 pr-3">ສັນຍາລັກ</th>
+                                        <th class="py-2 pr-3">ອັດຕາ (ຕໍ່ LAK)</th>
+                                        <th class="py-2 pr-3 text-right">ຈັດການ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="currency-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Member management -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-users text-emerald-600"></i> ສ້າງສະມາຊິກ & ກະເປົ໋າເງິນສະມາຊິກ</h3>
+                        <form onsubmit="addMember(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                            <input type="text" id="member-name" placeholder="ຊື່ສະມາຊິກ (ຈຳເປັນ)" required class="p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            <input type="text" id="member-phone" placeholder="ເບີໂທ" class="p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow">
+                                <i class="fa-solid fa-plus mr-1"></i> ເພີ່ມສະມາຊິກ
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Wallet list: members -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between border-b pb-2 mb-4">
+                            <h3 class="font-bold text-slate-800 text-base">ກະເປົ໋າເງິນສະມາຊິກທັງໝົດ</h3>
+                        </div>
+                        <div id="wallet-list-container" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Wallet top-up / deduct form -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2">ຝາກ / ຖອນ ເງິນເຂົ້າ-ອອກ ກະເປົ໋າ</h3>
+                        <form onsubmit="submitWalletAdjust(event)" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                            <div class="md:col-span-2">
+                                <label class="block text-slate-500 mb-1">ເລືອກເຈົ້າຂອງກະເປົ໋າ</label>
+                                <select id="adjust-owner-select" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"></select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">ສະກຸນເງິນ</label>
+                                <select id="adjust-currency-select" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"></select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-500 mb-1">ຈຳນວນເງິນ</label>
+                                <input type="number" step="0.01" id="adjust-amount" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                            </div>
+                            <div class="md:col-span-2 flex gap-2">
+                                <button type="submit" data-action="topup" onclick="this.form.dataset.chosenAction='topup'" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow">
+                                    <i class="fa-solid fa-plus mr-1"></i> ຝາກເງິນເຂົ້າ
+                                </button>
+                                <button type="submit" data-action="withdraw" onclick="this.form.dataset.chosenAction='withdraw'" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow">
+                                    <i class="fa-solid fa-minus mr-1"></i> ຖອນເງິນອອກ
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: Mobile Camera Barcode Scanner -->
+    <div id="camera-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-camera text-sky-400"></i>
+                    <h3 class="font-bold text-sm">สแกนบาร์โค้ดด้วยกล้องโทรศัพท์</h3>
+                </div>
+                <button onclick="closeCameraScanner()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-900 flex flex-col items-center">
+                <div id="interactive-reader" class="w-full max-w-sm rounded-xl overflow-hidden border-2 border-sky-500 bg-black"></div>
+                <p class="text-xs text-slate-300 mt-3 text-center">
+                    ส่องกล้องไปที่บาร์โค้ดบนตัวสินค้า ระบบจะค้นหาและเพิ่มลงในตะกร้าอัตโนมัติ
+                </p>
+            </div>
+            <div class="p-3 bg-slate-100 flex justify-end">
+                <button onclick="closeCameraScanner()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Payment Gateway & Calculator Modal -->
+    <div id="payment-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Payment Modal Header -->
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-base" id="pay-modal-title">ชำระเงิน</h3>
+                    <p class="text-xs text-slate-400">เลือกระบุยอดเงินเพื่อปิดการขาย</p>
+                </div>
+                <button onclick="closePaymentModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto custom-scrollbar space-y-4">
+                
+                <!-- Total Display Box -->
+                <div class="bg-sky-50 border border-sky-200 p-4 rounded-2xl text-center">
+                    <span class="text-xs text-sky-700 font-medium">ยอดเงินรวมที่ต้องชำระ</span>
+                    <div class="text-3xl font-extrabold text-sky-700 font-mono mt-1" id="pay-modal-amount">฿0.00</div>
+                </div>
+
+                <!-- CASH PAYMENT MODE -->
+                <div id="pay-cash-section" class="space-y-3">
+                    <label class="block text-xs font-semibold text-slate-700">จำนวนเงินสดที่รับมา (บาท):</label>
+                    <input type="number" id="cash-received-input" oninput="calculateChange()" placeholder="0.00 text-right" 
+                           class="w-full text-2xl font-bold font-mono text-slate-800 p-3 bg-slate-50 border-2 border-sky-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 text-right">
+                    
+                    <!-- Quick Cash Buttons -->
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="setQuickCash('exact')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">พอดีเป๊ะ</button>
+                        <button onclick="setQuickCash(100)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">100</button>
+                        <button onclick="setQuickCash(500)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">500</button>
+                        <button onclick="setQuickCash(1000)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">1,000</button>
+                    </div>
+
+                    <!-- Change Calculation Box -->
+                    <div class="p-3 bg-slate-100 rounded-xl flex justify-between items-center text-sm">
+                        <span class="font-medium text-slate-600">เงินทอน (Change):</span>
+                        <span id="cash-change-display" class="font-mono text-xl font-bold text-emerald-600">฿0.00</span>
+                    </div>
+                </div>
+
+                <!-- QR PAYMENT MODE -->
+                <div id="pay-qr-section" class="hidden flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-3">
+                    <p class="text-xs text-slate-600">สแกน QR Code ด้วยแอปธนาคารใดก็ได้เพื่อชำระเงิน</p>
+                    <div class="bg-white p-3 border rounded-xl shadow-md inline-block">
+                        <!-- Dynamic Mock QR Code -->
+                        <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=PROMPTPAY" alt="PromptPay QR Code" class="w-44 h-44">
+                    </div>
+                    <div class="text-xs text-slate-500">
+                        <p class="font-semibold text-slate-700" id="promptpay-number-display">PromptPay: 081-234-5678</p>
+                        <p class="text-[10px] text-emerald-600 mt-1"><i class="fa-solid fa-spinner animate-spin"></i> รอการยืนยันสัญญาณโอนเงิน...</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex space-x-3">
+                <button onclick="closePaymentModal()" class="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold text-xs">
+                    ยกเลิก
+                </button>
+                <button onclick="confirmPayment()" id="btn-confirm-payment" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-lg transition-all">
+                    ยืนยันชำระเงิน <i class="fa-solid fa-check ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Printable Receipt & Order Summary Modal -->
+    <div id="receipt-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-3 bg-emerald-600 text-white flex justify-between items-center">
+                <h3 class="font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> ชำระเงินสำเร็จแล้ว</h3>
+                <button onclick="closeReceiptModal()" class="text-white hover:text-slate-200 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <!-- Printable Area -->
+            <div class="p-6 overflow-y-auto custom-scrollbar bg-white font-mono text-slate-800 text-xs space-y-3" id="printable-receipt">
+                <div class="text-center space-y-1">
+                    <h2 class="font-bold text-base font-sans" id="receipt-store-title">ร้านสะดวกซื้อ มินิมาร์ท พลัส</h2>
+                    <p class="text-[11px] font-sans text-slate-500" id="receipt-store-phone">โทร. 081-234-5678</p>
+                    <p class="text-[10px] text-slate-400">ใบกำกับภาษีอย่างย่อ / TAX Invoice</p>
+                    <div class="border-b border-dashed border-slate-300 my-2"></div>
+                </div>
+
+                <div class="text-[10px] space-y-0.5 text-slate-600">
+                    <div class="flex justify-between"><span>เลขที่บิล:</span><span id="rec-id">#ORD-000</span></div>
+                    <div class="flex justify-between"><span>วันที่:</span><span id="rec-date">00/00/0000 00:00</span></div>
+                    <div class="flex justify-between"><span>แคชเชียร์:</span><span>สมชาย (Shift #01)</span></div>
+                    <div class="flex justify-between"><span>ช่องทางชำระ:</span><span id="rec-pay-type">CASH</span></div>
+                </div>
+
+                <div class="border-b border-dashed border-slate-300 my-2"></div>
+
+                <!-- Items list -->
+                <div class="space-y-1" id="rec-items-list">
+                    <!-- Dynamic receipts items -->
+                </div>
+
+                <div class="border-b border-dashed border-slate-300 my-2"></div>
+
+                <div class="space-y-1 text-right">
+                    <div class="flex justify-between"><span>ราคารวม:</span><span id="rec-subtotal">฿0.00</span></div>
+                    <div class="flex justify-between"><span>VAT 7%:</span><span id="rec-vat">฿0.00</span></div>
+                    <div class="flex justify-between font-bold text-sm text-slate-900 pt-1"><span>ยอดสุทธิ:</span><span id="rec-total">฿0.00</span></div>
+                    <div class="flex justify-between text-slate-500 text-[10px]"><span>รับเงินมา:</span><span id="rec-paid">฿0.00</span></div>
+                    <div class="flex justify-between text-slate-500 text-[10px]"><span>เงินทอน:</span><span id="rec-change">฿0.00</span></div>
+                </div>
+
+                <div class="border-b border-dashed border-slate-300 my-2"></div>
+
+                <div class="text-center font-sans text-[11px] text-slate-500 pt-1">
+                    <p>*** ขอบคุณที่อุดหนุน ***</p>
+                    <p class="text-[9px] text-slate-400 mt-0.5" id="rec-footer-note">สินค้าซื้อแล้วไม่รับเปลี่ยนคืนภายใน 7 วัน</p>
+                </div>
+            </div>
+
+            <!-- Receipt Action Buttons -->
+            <div class="p-3 bg-slate-50 border-t border-slate-200 flex space-x-2">
+                <button onclick="window.print()" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 shadow">
+                    <i class="fa-solid fa-print"></i> พิมพ์ใบเสร็จ
+                </button>
+                <button onclick="closeReceiptModal()" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-medium text-xs shadow">
+                    เริ่มบิลถัดไป <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Admin Product Add/Edit Modal -->
+    <div id="product-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-sm" id="prod-modal-title">เพิ่มสินค้าใหม่</h3>
+                <button onclick="closeProductModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="saveProduct(event)" class="p-4 space-y-3 text-xs">
+                <input type="hidden" id="prod-id">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">ชื่อสินค้า</label>
+                    <input type="text" id="prod-name" required class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">รหัสบาร์โค้ด / SKU</label>
+                        <input type="text" id="prod-barcode" required class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">หมวดหมู่</label>
+                        <select id="prod-category" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl">
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ราคาขาย (บาท)</label>
+                        <input type="number" step="0.5" min="0" id="prod-price" required class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">ต้นทุนต่อหน่วย (ไม่บังคับ)</label>
+                        <input type="number" step="0.5" min="0" id="prod-cost" placeholder="สำหรับคำนวณกำไร" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">จำนวนสต็อกคงเหลือ</label>
+                        <input type="number" id="prod-stock" required class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">แจ้งเตือนสต็อกต่ำที่</label>
+                        <input type="number" id="prod-lowstock" placeholder="ค่าเริ่มต้นจากระบบ" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">URL รูปภาพสินค้า</label>
+                    <input type="text" id="prod-image" placeholder="https://..." class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="prod-active" checked class="w-4 h-4 rounded">
+                    <label for="prod-active" class="font-medium text-slate-700">เปิดขายสินค้านี้ในหน้า POS</label>
+                </div>
+                <div class="pt-3 border-t flex space-x-2">
+                    <button type="button" onclick="closeProductModal()" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl font-semibold">ยกเลิก</button>
+                    <button type="submit" class="flex-1 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold shadow">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: Admin Password (login / first-time setup / forgot password) -->
+    <div id="pin-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-4 bg-slate-900 text-white text-center">
+                <i id="auth-icon" class="fa-solid fa-lock text-2xl text-sky-400 mb-1"></i>
+                <h3 id="auth-title" class="font-bold text-sm">ກະລຸນາໃສ່ລະຫັດຜ່ານເພື່ອເຂົ້າຫນ້າແອັດມິນ</h3>
+                <p id="auth-subtitle" class="text-[11px] text-slate-400 mt-0.5">SmartPOS Pro Admin</p>
+            </div>
+
+            <!-- Login -->
+            <form id="auth-login-form" onsubmit="submitAdminLogin(event)" class="p-5 space-y-3">
+                <input type="password" id="auth-password" autocomplete="current-password" placeholder="ລະຫັດຜ່ານ" class="w-full text-center p-3 bg-slate-50 border-2 border-sky-500 rounded-xl focus:outline-none">
+                <p id="auth-login-error" class="hidden text-rose-500 text-xs text-center font-medium"></p>
+                <div class="text-center">
+                    <button type="button" onclick="showAuthMode('forgot')" class="text-[11px] text-sky-600 hover:underline">ລືມລະຫັດຜ່ານ?</button>
+                </div>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="cancelAdminAuth()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs">ຍົກເລີກ</button>
+                    <button type="submit" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold text-xs shadow">ຢືນຢັນ</button>
+                </div>
+            </form>
+
+            <!-- First-time setup -->
+            <form id="auth-setup-form" onsubmit="submitAdminSetup(event)" class="hidden p-5 space-y-3">
+                <p class="text-[11px] text-slate-500 text-center">ຫນ້າແອັດມິນຍັງບໍ່ມີລະຫັດຜ່ານ ກະລຸນາຕັ້ງລະຫັດຜ່ານກ່ອນເຂົ້າໃຊ້ງານ</p>
+                <input type="password" id="auth-setup-pw" autocomplete="new-password" placeholder="ລະຫັດຜ່ານໃໝ່ (ຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ)" class="w-full p-3 bg-slate-50 border-2 border-sky-500 rounded-xl focus:outline-none text-xs">
+                <input type="password" id="auth-setup-pw2" autocomplete="new-password" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none text-xs">
+                <p id="auth-setup-error" class="hidden text-rose-500 text-xs text-center font-medium"></p>
+                <p class="text-[11px] text-slate-400 text-center">ຖ້າລືມລະຫັດຜ່ານ ຕ້ອງຕິດຕໍ່ແອັດມິນຫຼັກຂອງ LaoMarket ເພື່ອປ່ຽນລະຫັດຜ່ານໃໝ່</p>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="cancelAdminAuth()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs">ຍົກເລີກ</button>
+                    <button type="submit" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold text-xs shadow">ຕັ້ງລະຫັດຜ່ານ</button>
+                </div>
+            </form>
+
+            <!-- Forgot password -->
+            <form id="auth-forgot-form" onsubmit="submitAdminReset(event)" class="hidden p-5 space-y-3">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 space-y-1">
+                    <p class="font-semibold"><i class="fa-solid fa-headset mr-1"></i> ລືມລະຫັດຜ່ານ?</p>
+                    <p>ກະລຸນາຕິດຕໍ່ <b>ແອັດມິນຫຼັກຂອງ LaoMarket</b> ເພື່ອຂໍລະຫັດປົດລັອກ ແລ້ວນຳມາປ່ຽນລະຫັດຜ່ານໃໝ່ດ້ານລຸ່ມ</p>
+                    <div id="auth-support-contact" class="font-mono"></div>
+                </div>
+                <input type="text" id="auth-reset-code" autocomplete="off" placeholder="ລະຫັດປົດລັອກຈາກ LaoMarket" class="w-full p-3 bg-slate-50 border-2 border-sky-500 rounded-xl focus:outline-none text-xs font-mono">
+                <input type="password" id="auth-reset-pw" autocomplete="new-password" placeholder="ລະຫັດຜ່ານໃໝ່ (ຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ)" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none text-xs">
+                <input type="password" id="auth-reset-pw2" autocomplete="new-password" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none text-xs">
+                <p id="auth-forgot-error" class="hidden text-rose-500 text-xs text-center font-medium"></p>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="showAuthMode('login')" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs">ກັບຄືນ</button>
+                    <button type="submit" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold text-xs shadow">ປ່ຽນລະຫັດຜ່ານ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Toast Alert Floating Banner -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-3 border border-slate-700">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toast-message" class="text-xs font-medium">ทำรายการเรียบร้อย</span>
+    </div>
+
+    <!-- Application Logic Javascript -->
+    <script>
+        /* ==========================================================
+           SmartPOS Pro - Application Logic
+           Rebuilt: fixes broken init, adds persistence, category
+           management, discounts, admin PIN lock, void/refund,
+           export/import, real profit tracking, and full settings.
+        ========================================================== */
+
+        let currentLang = 'th';
+
+        const i18n = {
+            th: {
+                nav_pos: "ระบบขายหน้าร้าน (POS)",
+                nav_admin: "ระบบแอดมิน (Admin)",
+                scanner_status: "Scanner Connected",
+                cashier_name: "แคชเชียร์ สมชาย",
+                search_placeholder: "สแกนบาร์โค้ด หรือ พิมพ์ชื่อสินค้า/SKU...",
+                btn_scan_camera: "สแกนด้วยกล้องมือถือ",
+                cat_all: "ทั้งหมด",
+                no_products: "ไม่พบรายการสินค้าที่ตรงกัน",
+                cart_title: "รายการสั่งซื้อปัจจุบัน",
+                btn_clear_cart: "ล้างตะกร้า",
+                cart_empty_title: "ยังไม่มีสินค้าในตะกร้า",
+                cart_empty_sub: "คลิกเลือกสินค้า หรือสแกนบาร์โค้ดเพื่อเริ่มรายการ",
+                lbl_subtotal: "ราคารวม (Subtotal)",
+                lbl_vat: "ภาษีมูลค่าเพิ่ม",
+                lbl_discount: "ส่วนลดพิเศษ (Discount)",
+                lbl_total: "ยอดสุทธิ (Total)",
+                btn_pay_cash: "รับเงินสด (Cash)",
+                btn_pay_qr: "สแกน QR โอนเงิน",
+                admin_menu_title: "เมนูผู้ดูแลระบบ",
+                admin_tab_dashboard: "สรุปยอดรายรับ & แดชบอร์ด",
+                admin_tab_products: "จัดการสินค้า & สต็อก",
+                admin_tab_history: "ประวัติการขาย & ใบเสร็จ",
+                admin_tab_settings: "ตั้งค่าร้านค้า & QR",
+                stat_today_rev: "ยอดขายรวมวันนี้",
+                stat_today_bills: "จำนวนบิลที่ขายได้",
+                stat_low_stock: "สินค้าสต็อกต่ำ",
+                stat_profit: "กำไรขั้นต้นประเมิน",
+                chart_sales_title: "กราฟสรุปยอดขายรายวัน (7 วันล่าสุด)",
+                chart_pay_title: "สัดส่วนช่องทางชำระเงิน",
+                lbl_stock_low: "สต็อกต่ำ",
+                lbl_out_of_stock: "หมด (Out of stock)",
+                lbl_items_unit: "รายการสินค้า",
+                lbl_stock_rem: "คงเหลือ",
+                msg_added: "เพิ่มลงในตะกร้าแล้ว",
+                msg_not_found: "ไม่พบสินค้าสำหรับบาร์โค้ด",
+                msg_stock_exceeded: "มีจำนวนในสต็อกไม่เพียงพอ",
+                msg_pay_success: "ปิดการขายเรียบร้อยแล้ว!"
+            },
+            la: {
+                nav_pos: "ລະບົບຂາຍໜ້າຮ້ານ (POS)",
+                nav_admin: "ລະບົບແອັດມິນ (Admin)",
+                scanner_status: "ເຊື່ອມຕໍ່ Scanner ແລ້ວ",
+                cashier_name: "ແຄັດເຊຍ ສົມຊາຍ",
+                search_placeholder: "ສະແກນບາໂຄດ ຫຼື ພິມຊື່ສິນຄ້າ/SKU...",
+                btn_scan_camera: "ສະແກນດ້ວຍກ້ອງມືຖື",
+                cat_all: "ທັງໝົດ",
+                no_products: "ບໍ່ພົບລາຍການສິນຄ້າທີ່ກົງກັນ",
+                cart_title: "ລາຍການສັ່ງຊື້ປັດຈຸບັນ",
+                btn_clear_cart: "ລ້າງກະຕ່າ",
+                cart_empty_title: "ຍັງບໍ່ມີສິນຄ້າໃນກະຕ່າ",
+                cart_empty_sub: "ກົດເລືອກສິນຄ້າ ຫຼື ສະແກນບາໂຄດເພື່ອເລີ່ມລາຍການ",
+                lbl_subtotal: "ລາຄາລວມ (Subtotal)",
+                lbl_vat: "ອາກອນມູນຄ່າເພີ່ມ",
+                lbl_discount: "ສ່ວນຫຼຸດພິເສດ (Discount)",
+                lbl_total: "ຍອດສຸດທິ (Total)",
+                btn_pay_cash: "ຮັບເງິນສົດ (Cash)",
+                btn_pay_qr: "ສະແກນ QR ໂອນເງິນ",
+                admin_menu_title: "ເມນູຜູ້ດູແລລະບົບ",
+                admin_tab_dashboard: "ສະຫຼຸບຍອດລາຍຮັບ & ແດັດບອດ",
+                admin_tab_products: "ຈັດການສິນຄ້າ & ສະຕັອກ",
+                admin_tab_history: "ປະຫວັດການຂາຍ & ໃບບິນ",
+                admin_tab_settings: "ຕັ້ງຄ່າຮ້ານຄ້າ & QR",
+                stat_today_rev: "ຍອດຂາຍລວມມື້ນີ້",
+                stat_today_bills: "ຈຳນວນໃບບິນທີ່ຂາຍໄດ້",
+                stat_low_stock: "ສິນຄ້າສະຕັອກຕ່ຳ",
+                stat_profit: "ກຳໄລຂັ້ນຕົ້ນປະເມິນ",
+                chart_sales_title: "ກຣາຟສະຫຼຸບຍອດຂາຍລາຍວັນ (7 ວັນລ້າສຸດ)",
+                chart_pay_title: "ສັດສ່ວນຊ່ອງທາງຊຳລະເງິນ",
+                lbl_stock_low: "ສະຕັອກຕ່ຳ",
+                lbl_out_of_stock: "ໝົດ (Out of stock)",
+                lbl_items_unit: "ລາຍການສິນຄ້າ",
+                lbl_stock_rem: "ຄົງເຫຼືອ",
+                msg_added: "ເພີ່ມລົງໃນກະຕ່າແລ້ວ",
+                msg_not_found: "ບໍ່ພົບສິນຄ້າສຳລັບບາໂຄດ",
+                msg_stock_exceeded: "ມີຈຳນວນໃນສະຕັອກບໍ່ພຽງພໍ",
+                msg_pay_success: "ປິດການຂາຍຮຽບຮ້ອຍແລ້ວ!"
+            },
+            en: {
+                nav_pos: "POS Register",
+                nav_admin: "Admin Backoffice",
+                scanner_status: "Scanner Connected",
+                cashier_name: "Cashier Somchai",
+                search_placeholder: "Scan barcode or type product name/SKU...",
+                btn_scan_camera: "Scan with Camera",
+                cat_all: "All Items",
+                no_products: "No matching products found",
+                cart_title: "Current Cart Order",
+                btn_clear_cart: "Clear Cart",
+                cart_empty_title: "Your cart is empty",
+                cart_empty_sub: "Click on a product or scan a barcode to start",
+                lbl_subtotal: "Subtotal",
+                lbl_vat: "VAT",
+                lbl_discount: "Discount",
+                lbl_total: "Total Net",
+                btn_pay_cash: "Pay Cash",
+                btn_pay_qr: "Pay QR Code",
+                admin_menu_title: "Management Menu",
+                admin_tab_dashboard: "Revenue & Dashboard",
+                admin_tab_products: "Products & Inventory",
+                admin_tab_history: "Sales History & Receipts",
+                admin_tab_settings: "Store Settings & QR",
+                stat_today_rev: "Today's Revenue",
+                stat_today_bills: "Completed Orders",
+                stat_low_stock: "Low Stock Items",
+                stat_profit: "Estimated Gross Profit",
+                chart_sales_title: "Daily Sales Trend (Last 7 Days)",
+                chart_pay_title: "Payment Method Breakdown",
+                lbl_stock_low: "Low Stock",
+                lbl_out_of_stock: "Out of Stock",
+                lbl_items_unit: "Items",
+                lbl_stock_rem: "In Stock",
+                msg_added: "added to cart",
+                msg_not_found: "No product found for barcode",
+                msg_stock_exceeded: "Insufficient stock quantity",
+                msg_pay_success: "Payment completed successfully!"
+            }
+        };
+
+        function t(key) {
+            return (i18n[currentLang] && i18n[currentLang][key]) ? i18n[currentLang][key] : (i18n['th'][key] || key);
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.getElementById('lang-select').value = lang;
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (key) el.innerText = t(key);
+            });
+
+            document.getElementById('barcode-input').placeholder = t('search_placeholder');
+
+            renderCategoryPills();
+            renderProducts();
+            renderCart();
+            renderCategoryOptions();
+
+            if (!document.getElementById('tab-admin').classList.contains('hidden')) {
+                updateDashboardMetrics();
+            }
+        }
+
+        // ------------------------------------------------------------
+        // Storage keys & defaults
+        // ------------------------------------------------------------
+        const STORAGE_KEY = 'smartpos_pro_data_v1';
+
+        const DEFAULT_CATEGORIES = ['เครื่องดื่ม', 'ขนมและของทานเล่น', 'อาหารและเบเกอรี่', 'ของใช้ทั่วไป'];
+
+        const DEFAULT_PRODUCTS = [
+            { id: 1, name: 'กาแฟเย็น อาราบิก้า 22 oz', category: 'เครื่องดื่ม', price: 45.00, cost: 22.00, stock: 35, lowStock: null, barcode: '885000000001', image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=300&q=80', active: true },
+            { id: 2, name: 'ชาไทยเย็น หวานน้อย 22 oz', category: 'เครื่องดื่ม', price: 40.00, cost: 18.00, stock: 20, lowStock: null, barcode: '885000000002', image: 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=300&q=80', active: true },
+            { id: 3, name: 'น้ำดื่มสิงห์ 600 ml', category: 'เครื่องดื่ม', price: 10.00, cost: 5.00, stock: 120, lowStock: null, barcode: '885000000003', image: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=300&q=80', active: true },
+            { id: 4, name: 'ขนมปังโฮลวีท สังขยา', category: 'อาหารและเบเกอรี่', price: 25.00, cost: 14.00, stock: 4, lowStock: null, barcode: '885000000004', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=300&q=80', active: true },
+            { id: 5, name: 'มันฝรั่งเลย์ รสออริจินัล 50g', category: 'ขนมและของทานเล่น', price: 20.00, cost: 12.00, stock: 18, lowStock: null, barcode: '885000000005', image: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=300&q=80', active: true },
+            { id: 6, name: 'ข้าวผัดกระเพราไข่ดาว (กล่อง)', category: 'อาหารและเบเกอรี่', price: 55.00, cost: 30.00, stock: 8, lowStock: null, barcode: '885000000006', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=300&q=80', active: true },
+            { id: 7, name: 'กระดาษทิชชู่ มินิแพ็ค', category: 'ของใช้ทั่วไป', price: 15.00, cost: 8.00, stock: 45, lowStock: null, barcode: '885000000007', image: 'https://images.unsplash.com/photo-1584556812952-905ffd0c611a?auto=format&fit=crop&w=300&q=80', active: true },
+            { id: 8, name: 'ช็อกโกแลตบาร์ 45g', category: 'ขนมและของทานเล่น', price: 30.00, cost: 16.00, stock: 2, lowStock: null, barcode: '885000000008', image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=300&q=80', active: true }
+        ];
+
+        const DEFAULT_SETTINGS = {
+            name: "ร้านสะดวกซื้อ มินิมาร์ท พลัส",
+            phone: "081-234-5678",
+            promptpay: "0812345678",
+            receiptFooter: "สินค้าซื้อแล้วไม่รับเปลี่ยนคืนภายใน 7 วัน",
+            vatRate: 7,
+            lowStockThreshold: 5,
+            currency: "฿",
+            adminPasswordHash: "",
+            adminPasswordSalt: ""
+        };
+
+        // Base currency for exchange calculations is always LAK (rate = 1)
+        const BASE_CURRENCY_CODE = 'LAK';
+
+        const DEFAULT_CURRENCIES = [
+            { code: 'LAK', name: 'ກີບລາວ', symbol: '₭', rate: 1 },
+            { code: 'THB', name: 'ບາດໄທ', symbol: '฿', rate: 650 },
+            { code: 'USD', name: 'ໂດລາສະຫະລັດ', symbol: '$', rate: 21000 },
+            { code: 'PT', name: 'ຄະແນນສະມາຊິກ (Point)', symbol: 'pt', rate: 100 }
+        ];
+
+        const DEFAULT_MEMBERS = [];
+
+        // ------------------------------------------------------------
+        // Global Application State
+        // ------------------------------------------------------------
+        let products = [];
+        let categories = [];
+        let salesHistory = [];
+        let storeSettings = {};
+
+        let currencies = [];
+        let members = [];
+
+        let currentCart = [];
+        let currentDiscount = 0;
+        let activeCategory = 'all';
+        let currentPaymentMode = 'CASH';
+
+        let html5QrCodeScanner = null;
+        let salesTrendChart = null;
+        let paymentBreakdownChart = null;
+        let chartsInitialized = false;
+
+        let barcodeBuffer = '';
+        let lastKeyTime = Date.now();
+
+        let isAdminUnlocked = false;
+
+        // ------------------------------------------------------------
+        // Persistence
+        // ------------------------------------------------------------
+        function saveState() {
+            try {
+                const payload = { products, categories, salesHistory, storeSettings, currencies, members };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            } catch (err) {
+                console.error('Unable to save state', err);
+            }
+        }
+
+        function loadState() {
+            let saved = null;
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) saved = JSON.parse(raw);
+            } catch (err) {
+                console.error('Unable to load saved state', err);
+            }
+
+            if (saved && Array.isArray(saved.products) && saved.products.length) {
+                products = saved.products;
+            } else {
+                products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+            }
+
+            if (saved && Array.isArray(saved.categories) && saved.categories.length) {
+                categories = saved.categories;
+            } else {
+                categories = [...DEFAULT_CATEGORIES];
+            }
+
+            if (saved && Array.isArray(saved.salesHistory)) {
+                salesHistory = saved.salesHistory;
+            } else {
+                salesHistory = [];
+                generateMockSalesHistory();
+            }
+
+            storeSettings = Object.assign({}, DEFAULT_SETTINGS, (saved && saved.storeSettings) || {});
+
+            currencies = (saved && Array.isArray(saved.currencies) && saved.currencies.length) ? saved.currencies : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
+            members = (saved && Array.isArray(saved.members)) ? saved.members : JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
+        }
+
+        function resetDemoData() {
+            if (!confirm('ต้องการรีเซ็ตข้อมูลทั้งหมด (สินค้า/ประวัติการขาย/การตั้งค่า) กลับเป็นข้อมูลตัวอย่างหรือไม่? ระบบจะสำรองข้อมูลปัจจุบันไว้ให้ก่อน และสามารถกู้คืนได้ภายหลังจากส่วน "สำรองข้อมูล"')) return;
+            createBackupSnapshot(true, 'สำรองอัตโนมัติก่อนรีเซ็ตข้อมูล');
+            localStorage.removeItem(STORAGE_KEY);
+            products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+            categories = [...DEFAULT_CATEGORIES];
+            salesHistory = [];
+            generateMockSalesHistory();
+            storeSettings = keepAdminSecurity(Object.assign({}, DEFAULT_SETTINGS));
+            currencies = JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
+            members = JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
+            saveState();
+            fullRefresh();
+            showToast('รีเซ็ตข้อมูลตัวอย่างเรียบร้อยแล้ว (สำรองข้อมูลเดิมไว้ให้แล้ว)');
+        }
+
+        function exportData() {
+            const exportSettings = Object.assign({}, storeSettings);
+            delete exportSettings.adminPasswordHash; delete exportSettings.adminPasswordSalt; delete exportSettings.adminPin;
+            const payload = { products, categories, salesHistory, storeSettings: exportSettings, currencies, members, exportedAt: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `smartpos-backup-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast('ส่งออกข้อมูลสำเร็จ');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data.products)) throw new Error('invalid format');
+                    createBackupSnapshot(true, 'สำรองอัตโนมัติก่อนนำเข้าข้อมูล');
+                    products = data.products;
+                    categories = Array.isArray(data.categories) && data.categories.length ? data.categories : [...DEFAULT_CATEGORIES];
+                    salesHistory = Array.isArray(data.salesHistory) ? data.salesHistory : [];
+                    storeSettings = keepAdminSecurity(Object.assign({}, DEFAULT_SETTINGS, data.storeSettings || {}));
+                    currencies = Array.isArray(data.currencies) && data.currencies.length ? data.currencies : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
+                    members = Array.isArray(data.members) ? data.members : [];
+                    saveState();
+                    fullRefresh();
+                    showToast('นำเข้าข้อมูลสำเร็จ');
+                } catch (err) {
+                    showToast('ไฟล์ไม่ถูกต้อง ไม่สามารถนำเข้าข้อมูลได้', 'error');
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function fullRefresh() {
+            renderCategoryPills();
+            renderCategoryOptions();
+            renderProducts();
+            renderCart();
+            renderCategoryManagerList();
+            populateSettingsForm();
+            applyHeaderAndReceiptSettings();
+            renderAdminProductTable();
+            renderAdminSalesHistoryTable();
+            updateDashboardMetrics();
+            renderBackupList();
+            renderCurrencyTable();
+            renderWalletList();
+        }
+
+        // ------------------------------------------------------------
+        // Backup Snapshots (versioned local backups, separate from the
+        // live working data, so admins can roll back to an earlier point)
+        // ------------------------------------------------------------
+        const BACKUP_KEY = 'smartpos_pro_backups_v1';
+        const LAST_AUTO_BACKUP_KEY = 'smartpos_pro_last_autobackup';
+        const MAX_BACKUPS = 10;
+        const AUTO_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
+
+        function getBackups() {
+            try {
+                const raw = localStorage.getItem(BACKUP_KEY);
+                const list = raw ? JSON.parse(raw) : [];
+                return Array.isArray(list) ? list : [];
+            } catch (err) {
+                console.error('Unable to read backups', err);
+                return [];
+            }
+        }
+
+        function saveBackups(list) {
+            try {
+                localStorage.setItem(BACKUP_KEY, JSON.stringify(list));
+            } catch (err) {
+                console.error('Unable to save backups (storage may be full)', err);
+                showToast('พื้นที่จัดเก็บเต็ม ไม่สามารถบันทึกสำรองข้อมูลเพิ่มได้ กรุณาลบสำรองข้อมูลเก่าออกก่อน', 'error');
+            }
+        }
+
+        function createBackupSnapshot(isAuto, reasonLabel) {
+            const snapshot = {
+                id: Date.now(),
+                timestamp: Date.now(),
+                dateLabel: new Date().toLocaleString('th-TH'),
+                auto: !!isAuto,
+                reason: reasonLabel || null,
+                data: {
+                    products: JSON.parse(JSON.stringify(products)),
+                    categories: JSON.parse(JSON.stringify(categories)),
+                    salesHistory: JSON.parse(JSON.stringify(salesHistory)),
+                    storeSettings: (function() { const c = JSON.parse(JSON.stringify(storeSettings)); delete c.adminPasswordHash; delete c.adminPasswordSalt; delete c.adminPin; return c; })()
+                }
+            };
+
+            let backups = getBackups();
+            backups.unshift(snapshot);
+            if (backups.length > MAX_BACKUPS) {
+                backups = backups.slice(0, MAX_BACKUPS);
+            }
+            saveBackups(backups);
+
+            if (isAuto) {
+                localStorage.setItem(LAST_AUTO_BACKUP_KEY, String(Date.now()));
+            }
+
+            renderBackupList();
+            if (!isAuto) showToast('สำรองข้อมูลเรียบร้อยแล้ว');
+        }
+
+        function checkAutoBackup() {
+            let lastAuto = 0;
+            try {
+                lastAuto = parseInt(localStorage.getItem(LAST_AUTO_BACKUP_KEY), 10) || 0;
+            } catch (err) { lastAuto = 0; }
+
+            if (Date.now() - lastAuto >= AUTO_BACKUP_INTERVAL_MS) {
+                createBackupSnapshot(true);
+            }
+        }
+
+        function renderBackupList() {
+            const container = document.getElementById('backup-list');
+            const infoEl = document.getElementById('last-backup-info');
+            const maxEl = document.getElementById('max-backup-count');
+            if (!container) return;
+
+            if (maxEl) maxEl.innerText = MAX_BACKUPS;
+
+            const backups = getBackups();
+
+            if (infoEl) {
+                infoEl.innerText = backups.length
+                    ? `สำรองข้อมูลล่าสุด: ${backups[0].dateLabel} ${backups[0].auto ? '(อัตโนมัติ)' : '(บันทึกเอง)'}`
+                    : 'ยังไม่มีการสำรองข้อมูล';
+            }
+
+            if (backups.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">ยังไม่มีสำรองข้อมูล กดปุ่ม "สำรองข้อมูลตอนนี้" เพื่อเริ่มต้น</p>';
+                return;
+            }
+
+            container.innerHTML = backups.map(b => `
+                <div class="flex items-center justify-between gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                    <div class="min-w-0">
+                        <div class="font-semibold text-slate-700 truncate">${escapeHtml(b.dateLabel)}</div>
+                        <div class="text-[10px] text-slate-400">${b.reason ? escapeHtml(b.reason) : (b.auto ? 'สำรองอัตโนมัติ' : 'บันทึกด้วยตนเอง')} • สินค้า ${b.data.products.length} รายการ • บิล ${b.data.salesHistory.length} รายการ</div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="restoreBackup(${b.id})" class="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-600 rounded-lg font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-clock-rotate-left"></i> กู้คืน
+                        </button>
+                        <button onclick="deleteBackup(${b.id})" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function restoreBackup(id) {
+            const backups = getBackups();
+            const backup = backups.find(b => b.id === id);
+            if (!backup) return;
+
+            if (!confirm(`ต้องการกู้คืนข้อมูล ณ วันที่ ${backup.dateLabel} หรือไม่? ข้อมูลปัจจุบันในระบบจะถูกแทนที่ (แนะนำให้สำรองข้อมูลปัจจุบันก่อนกู้คืน)`)) return;
+
+            products = JSON.parse(JSON.stringify(backup.data.products));
+            categories = JSON.parse(JSON.stringify(backup.data.categories));
+            salesHistory = JSON.parse(JSON.stringify(backup.data.salesHistory));
+            storeSettings = keepAdminSecurity(Object.assign({}, DEFAULT_SETTINGS, backup.data.storeSettings));
+
+            saveState();
+            fullRefresh();
+            showToast('กู้คืนข้อมูลเรียบร้อยแล้ว');
+        }
+
+        function deleteBackup(id) {
+            if (!confirm('ต้องการลบสำรองข้อมูลนี้หรือไม่?')) return;
+            let backups = getBackups();
+            backups = backups.filter(b => b.id !== id);
+            saveBackups(backups);
+            renderBackupList();
+            showToast('ลบสำรองข้อมูลเรียบร้อยแล้ว');
+        }
+
+        // ------------------------------------------------------------
+        // Clock
+        // ------------------------------------------------------------
+        // ------------------------------------------------------------
+        // Currencies
+        // ------------------------------------------------------------
+        function renderCurrencyTable() {
+            const body = document.getElementById('currency-table-body');
+            if (!body) return;
+            body.innerHTML = '';
+            currencies.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100';
+                const isBase = c.code === BASE_CURRENCY_CODE;
+                tr.innerHTML = `
+                    <td class="py-2 pr-3 font-mono font-semibold text-slate-700">${escapeHtml(c.code)}</td>
+                    <td class="py-2 pr-3">${escapeHtml(c.name)}</td>
+                    <td class="py-2 pr-3">${escapeHtml(c.symbol || '')}</td>
+                    <td class="py-2 pr-3 font-mono">
+                        ${isBase ? '1 (ຫຼັກ)' : `<input type="number" step="0.0001" min="0" value="${c.rate}" onchange="updateCurrencyRate('${c.code}', this.value)" class="w-24 p-1.5 bg-slate-50 border border-slate-300 rounded-lg font-mono">`}
+                    </td>
+                    <td class="py-2 pr-3 text-right">
+                        ${isBase ? '' : `<button onclick="deleteCurrency('${c.code}')" class="text-rose-500 hover:underline"><i class="fa-solid fa-trash"></i></button>`}
+                    </td>`;
+                body.appendChild(tr);
+            });
+            populateWalletFormSelectors();
+        }
+
+        function addCurrency(e) {
+            e.preventDefault();
+            const code = document.getElementById('curr-code').value.trim().toUpperCase();
+            const name = document.getElementById('curr-name').value.trim();
+            const symbol = document.getElementById('curr-symbol').value.trim();
+            const rate = parseFloat(document.getElementById('curr-rate').value);
+            if (!code || !name || isNaN(rate) || rate <= 0) {
+                showToast('ກະລຸນາປ້ອນຂໍ້ມູນສະກຸນເງິນໃຫ້ຄົບຖ້ວນ', 'error');
+                return;
+            }
+            if (currencies.some(c => c.code === code)) {
+                showToast('ລະຫັດສະກຸນເງິນນີ້ມີຢູ່ແລ້ວ', 'error');
+                return;
+            }
+            currencies.push({ code, name, symbol, rate });
+            saveState();
+            renderCurrencyTable();
+            e.target.reset();
+            document.getElementById('curr-rate').value = 1;
+            showToast('ເພີ່ມສະກຸນເງິນໃໝ່ສຳເລັດແລ້ວ');
+        }
+
+        function updateCurrencyRate(code, value) {
+            const c = currencies.find(x => x.code === code);
+            if (!c) return;
+            const rate = parseFloat(value);
+            if (isNaN(rate) || rate <= 0) return;
+            c.rate = rate;
+            saveState();
+            showToast(`ອັບເດດອັດຕາແລກປ່ຽນ ${code} ແລ້ວ`);
+        }
+
+        function deleteCurrency(code) {
+            if (code === BASE_CURRENCY_CODE) return;
+            if (!confirm('ຕ້ອງການລຶບສະກຸນເງິນນີ້ອອກຫຼືບໍ່? (ຍອດເງິນໃນກະເປົ໋າທີ່ເປັນສະກຸນນີ້ຈະຍັງຄົງຢູ່ແຕ່ຈະບໍ່ສາມາດແລກປ່ຽນໄດ້ອີກ)')) return;
+            currencies = currencies.filter(x => x.code !== code);
+            saveState();
+            renderCurrencyTable();
+        }
+
+        // ------------------------------------------------------------
+        // Members
+        // ------------------------------------------------------------
+        function addMember(e) {
+            e.preventDefault();
+            const name = document.getElementById('member-name').value.trim();
+            if (!name) return;
+            members.push({
+                id: Date.now(),
+                name,
+                phone: document.getElementById('member-phone').value.trim(),
+                wallets: { [BASE_CURRENCY_CODE]: 0 }
+            });
+            saveState();
+            renderWalletList();
+            populateWalletFormSelectors();
+            e.target.reset();
+            showToast('ເພີ່ມສະມາຊິກໃໝ່ສຳເລັດແລ້ວ');
+        }
+
+        function deleteMember(id) {
+            if (!confirm('ຕ້ອງການລຶບສະມາຊິກນີ້ອອກຫຼືບໍ່?')) return;
+            members = members.filter(x => x.id !== id);
+            saveState();
+            renderWalletList();
+            populateWalletFormSelectors();
+        }
+
+        // ------------------------------------------------------------
+        // Wallet owner helpers (members)
+        // ------------------------------------------------------------
+        function getAllWalletOwners() {
+            const owners = [];
+            members.forEach(m => owners.push({ type: 'member', id: m.id, name: m.name, ref: m }));
+            return owners;
+        }
+
+        function findWalletOwner(type, id) {
+            id = String(id);
+            if (type === 'member') return members.find(x => String(x.id) === id);
+            return null;
+        }
+
+        function ownerTypeLabel(type) {
+            return 'ສະມາຊິກ';
+        }
+
+        function formatMoney(amount, currencyCode) {
+            const c = currencies.find(x => x.code === currencyCode);
+            const symbol = c ? (c.symbol || c.code) : currencyCode;
+            const num = (Number(amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return `${num} ${symbol}`;
+        }
+
+        function renderWalletList() {
+            const container = document.getElementById('wallet-list-container');
+            if (!container) return;
+            const owners = getAllWalletOwners();
+
+            container.innerHTML = '';
+            if (!owners.length) {
+                container.innerHTML = '<p class="text-slate-400 text-xs text-center py-4">ຍັງບໍ່ມີຂໍ້ມູນກະເປົ໋າເງິນ</p>';
+                return;
+            }
+            owners.forEach(o => {
+                const wallets = o.ref.wallets || {};
+                const balancesHtml = Object.keys(wallets).length
+                    ? Object.keys(wallets).map(code => `<span class="inline-block bg-slate-100 text-slate-700 px-2 py-1 rounded-lg font-mono mr-1.5 mb-1">${formatMoney(wallets[code], code)}</span>`).join('')
+                    : '<span class="text-slate-400">ຍັງບໍ່ມີຍອດເງິນ</span>';
+                const div = document.createElement('div');
+                div.className = 'p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-2';
+                div.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-slate-700 text-xs flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-sky-100 text-sky-700">${ownerTypeLabel(o.type)}</span>
+                            ${escapeHtml(o.name)}
+                        </p>
+                        <div class="mt-1.5 text-[11px]">${balancesHtml}</div>
+                    </div>
+                    ${o.type === 'member' ? `<button onclick="deleteMember(${o.id})" class="text-rose-500 hover:underline text-[11px] self-start md:self-auto"><i class="fa-solid fa-trash mr-1"></i>ລຶບສະມາຊິກ</button>` : ''}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function populateWalletFormSelectors() {
+            const ownerSelect = document.getElementById('adjust-owner-select');
+            const currSelect = document.getElementById('adjust-currency-select');
+            if (ownerSelect) {
+                const owners = getAllWalletOwners();
+                ownerSelect.innerHTML = owners.map(o => `<option value="${o.type}:${o.id}">[${ownerTypeLabel(o.type)}] ${escapeHtml(o.name)}</option>`).join('') || '<option value="">-- ບໍ່ມີຂໍ້ມູນ --</option>';
+            }
+            if (currSelect) {
+                currSelect.innerHTML = currencies.map(c => `<option value="${c.code}">${c.code} - ${escapeHtml(c.name)}</option>`).join('');
+            }
+        }
+
+        function ensureWalletField(owner, code) {
+            if (!owner.wallets) owner.wallets = {};
+            if (typeof owner.wallets[code] !== 'number') owner.wallets[code] = 0;
+        }
+
+        function adjustWallet(type, id, code, delta) {
+            const owner = findWalletOwner(type, id);
+            if (!owner) return { success: false, message: 'ບໍ່ພົບເຈົ້າຂອງກະເປົ໋າ' };
+            ensureWalletField(owner, code);
+            if (delta < 0 && owner.wallets[code] + delta < -0.0000001) {
+                return { success: false, message: 'ຍອດເງິນໃນກະເປົ໋າບໍ່ພຽງພໍ' };
+            }
+            owner.wallets[code] = Math.round((owner.wallets[code] + delta) * 100) / 100;
+            return { success: true };
+        }
+
+        function submitWalletAdjust(e) {
+            e.preventDefault();
+            const action = e.target.dataset.chosenAction || 'topup';
+            const ownerVal = document.getElementById('adjust-owner-select').value;
+            const code = document.getElementById('adjust-currency-select').value;
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            if (!ownerVal || !code || isNaN(amount) || amount <= 0) {
+                showToast('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ', 'error');
+                return;
+            }
+            const [type, id] = ownerVal.split(':');
+            const delta = action === 'withdraw' ? -Math.abs(amount) : Math.abs(amount);
+            const result = adjustWallet(type, id, code, delta);
+            if (!result.success) {
+                showToast(result.message, 'error');
+                return;
+            }
+            saveState();
+            renderWalletList();
+            e.target.reset();
+            showToast(action === 'withdraw' ? 'ຖອນເງິນອອກຈາກກະເປົ໋າສຳເລັດແລ້ວ' : 'ຝາກເງິນເຂົ້າກະເປົ໋າສຳເລັດແລ້ວ');
+        }
+
+        // ------------------------------------------------------------
+        // Clock
+        // ------------------------------------------------------------
+        function initClock() {
+            function tick() {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('th-TH', { hour12: false });
+                const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                const timeEl = document.getElementById('current-time');
+                const dateEl = document.getElementById('current-date');
+                if (timeEl) timeEl.innerText = timeStr;
+                if (dateEl) dateEl.innerText = dateStr;
+            }
+            tick();
+            setInterval(tick, 1000);
+        }
+
+        // ------------------------------------------------------------
+        // Tab switching (POS <-> Admin) with PIN protection
+        // ------------------------------------------------------------
+        function switchTab(tab) {
+            if (tab === 'admin' && !isAdminUnlocked) {
+                openAdminAuthModal();
+                return;
+            }
+            activateTab(tab);
+        }
+
+        function activateTab(tab) {
+            const posBtn = document.getElementById('nav-pos-btn');
+            const adminBtn = document.getElementById('nav-admin-btn');
+            const posTab = document.getElementById('tab-pos');
+            const adminTab = document.getElementById('tab-admin');
+
+            const activeClasses = "flex items-center space-x-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-sky-600 text-white shadow-sm";
+            const inactiveClasses = "flex items-center space-x-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white";
+
+            if (tab === 'pos') {
+                // Leaving the admin area locks it again
+                isAdminUnlocked = false;
+                posTab.classList.remove('hidden');
+                posTab.classList.add('flex');
+                adminTab.classList.add('hidden');
+                adminTab.classList.remove('flex');
+                posBtn.className = activeClasses;
+                adminBtn.className = inactiveClasses;
+                document.getElementById('barcode-input').focus();
+            } else {
+                adminTab.classList.remove('hidden');
+                adminTab.classList.add('flex');
+                posTab.classList.add('hidden');
+                posTab.classList.remove('flex');
+                adminBtn.className = activeClasses;
+                posBtn.className = inactiveClasses;
+
+                if (!chartsInitialized) {
+                    initCharts();
+                    chartsInitialized = true;
+                } else if (salesTrendChart && paymentBreakdownChart) {
+                    salesTrendChart.resize();
+                    paymentBreakdownChart.resize();
+                }
+                updateDashboardMetrics();
+            }
+        }
+
+        // ------------------------------------------------------------
+        // Admin password (required) + LaoMarket-assisted reset
+        // ------------------------------------------------------------
+        // Contact details of the LaoMarket main admin, shown on the "forgot password" screen.
+        const LAOMARKET_SUPPORT = {
+            name: 'ແອັດມິນຫຼັກ LaoMarket',
+            phone: '',      // ເຊັ່ນ '020 xxxx xxxx'
+            whatsapp: '',   // ເຊັ່ນ '020 xxxx xxxx'
+            email: ''       // ເຊັ່ນ 'support@laomarket.la'
+        };
+        // Reset code issued by the LaoMarket main admin (stored only as hashes).
+        // To change it, replace both hashes (SHA-256 and fallback) for your new code.
+        const LAOMARKET_RESET_CODE_SHA256 = '3ab644cf3dd98660a37a04c1defdcc3d0ddede9b7d22345f3c89a4a0b25b49ee';
+        const LAOMARKET_RESET_CODE_FALLBACK = '84565996a4c01d89';
+        const MIN_PASSWORD_LENGTH = 6;
+        const MAX_LOGIN_ATTEMPTS = 5;
+        const LOGIN_LOCK_MS = 30000;
+        let authFailCount = 0;
+        let authLockedUntil = 0;
+
+        function fallbackHash(str) {
+            let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+            for (let i = 0; i < str.length; i++) {
+                const ch = str.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+        }
+
+        async function sha256Hex(text) {
+            try {
+                if (window.crypto && window.crypto.subtle) {
+                    const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch (err) { /* fall through */ }
+            return null;
+        }
+
+        // Returns "s:<sha256>" (preferred) or "f:<fallback>" when SubtleCrypto is unavailable
+        async function hashPassword(pw, salt, forceAlgo) {
+            const input = salt + ':' + pw;
+            if (forceAlgo !== 'f:') {
+                const hex = await sha256Hex(input);
+                if (hex) return 's:' + hex;
+            }
+            return 'f:' + fallbackHash(input);
+        }
+
+        function hasAdminPassword() {
+            return !!(storeSettings.adminPasswordHash || storeSettings.adminPin);
+        }
+
+        // Keep the current password when settings are replaced by import / reset / restore
+        function keepAdminSecurity(newSettings) {
+            newSettings.adminPasswordHash = storeSettings.adminPasswordHash || '';
+            newSettings.adminPasswordSalt = storeSettings.adminPasswordSalt || '';
+            if (storeSettings.adminPin) newSettings.adminPin = storeSettings.adminPin; else delete newSettings.adminPin;
+            return newSettings;
+        }
+
+        async function verifyAdminPassword(entered) {
+            if (storeSettings.adminPasswordHash) {
+                const algo = storeSettings.adminPasswordHash.slice(0, 2);
+                const h = await hashPassword(entered, storeSettings.adminPasswordSalt || '', algo);
+                return h === storeSettings.adminPasswordHash;
+            }
+            if (storeSettings.adminPin) return entered === String(storeSettings.adminPin); // legacy PIN
+            return false;
+        }
+
+        async function setAdminPassword(pw) {
+            const bytes = new Uint8Array(16);
+            if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes);
+            else for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+            const salt = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+            storeSettings.adminPasswordSalt = salt;
+            storeSettings.adminPasswordHash = await hashPassword(pw, salt);
+            delete storeSettings.adminPin;
+            saveState();
+        }
+
+        function validateNewPassword(pw, pw2) {
+            if (!pw || pw.length < MIN_PASSWORD_LENGTH) return `ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ ${MIN_PASSWORD_LENGTH} ຕົວອັກສອນ`;
+            if (pw !== pw2) return 'ລະຫັດຜ່ານທັງສອງຊ່ອງບໍ່ຕົງກັນ';
+            return '';
+        }
+
+        function setAuthError(id, msg) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (msg) { el.innerText = msg; el.classList.remove('hidden'); }
+            else { el.innerText = ''; el.classList.add('hidden'); }
+        }
+
+        function renderSupportContact() {
+            const el = document.getElementById('auth-support-contact');
+            if (!el) return;
+            const rows = [];
+            if (LAOMARKET_SUPPORT.phone) rows.push(`<div><i class="fa-solid fa-phone w-4"></i> ${escapeHtml(LAOMARKET_SUPPORT.phone)}</div>`);
+            if (LAOMARKET_SUPPORT.whatsapp) rows.push(`<div><i class="fa-brands fa-whatsapp w-4"></i> ${escapeHtml(LAOMARKET_SUPPORT.whatsapp)}</div>`);
+            if (LAOMARKET_SUPPORT.email) rows.push(`<div><i class="fa-solid fa-envelope w-4"></i> ${escapeHtml(LAOMARKET_SUPPORT.email)}</div>`);
+            el.innerHTML = rows.join('');
+        }
+
+        function showAuthMode(mode) {
+            const forms = { login: 'auth-login-form', setup: 'auth-setup-form', forgot: 'auth-forgot-form' };
+            Object.keys(forms).forEach(k => document.getElementById(forms[k]).classList.toggle('hidden', k !== mode));
+            const title = document.getElementById('auth-title');
+            const icon = document.getElementById('auth-icon');
+            ['auth-login-error', 'auth-setup-error', 'auth-forgot-error'].forEach(id => setAuthError(id, ''));
+            if (mode === 'login') {
+                title.innerText = 'ກະລຸນາໃສ່ລະຫັດຜ່ານເພື່ອເຂົ້າຫນ້າແອັດມິນ';
+                icon.className = 'fa-solid fa-lock text-2xl text-sky-400 mb-1';
+                setTimeout(() => document.getElementById('auth-password').focus(), 50);
+            } else if (mode === 'setup') {
+                title.innerText = 'ຕັ້ງລະຫັດຜ່ານຫນ້າແອັດມິນ';
+                icon.className = 'fa-solid fa-shield-halved text-2xl text-emerald-400 mb-1';
+                setTimeout(() => document.getElementById('auth-setup-pw').focus(), 50);
+            } else {
+                title.innerText = 'ລືມລະຫັດຜ່ານ';
+                icon.className = 'fa-solid fa-key text-2xl text-amber-400 mb-1';
+                renderSupportContact();
+                setTimeout(() => document.getElementById('auth-reset-code').focus(), 50);
+            }
+        }
+
+        function openAdminAuthModal() {
+            ['auth-password', 'auth-setup-pw', 'auth-setup-pw2', 'auth-reset-code', 'auth-reset-pw', 'auth-reset-pw2']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            document.getElementById('pin-modal').classList.remove('hidden');
+            showAuthMode(hasAdminPassword() ? 'login' : 'setup');
+        }
+
+        function cancelAdminAuth() {
+            document.getElementById('pin-modal').classList.add('hidden');
+        }
+
+        function unlockAdmin() {
+            isAdminUnlocked = true;
+            authFailCount = 0;
+            document.getElementById('pin-modal').classList.add('hidden');
+            activateTab('admin');
+        }
+
+        async function submitAdminLogin(e) {
+            e.preventDefault();
+            const now = Date.now();
+            if (now < authLockedUntil) {
+                setAuthError('auth-login-error', `ລອງຜິດຫຼາຍເກີນໄປ ກະລຸນາລໍຖ້າ ${Math.ceil((authLockedUntil - now) / 1000)} ວິນາທີ`);
+                return;
+            }
+            const input = document.getElementById('auth-password');
+            const entered = input.value;
+            if (await verifyAdminPassword(entered)) {
+                if (!storeSettings.adminPasswordHash && storeSettings.adminPin) {
+                    await setAdminPassword(entered); // upgrade legacy PIN to a hashed password
+                }
+                input.value = '';
+                unlockAdmin();
+            } else {
+                authFailCount++;
+                input.value = '';
+                if (authFailCount >= MAX_LOGIN_ATTEMPTS) {
+                    authLockedUntil = Date.now() + LOGIN_LOCK_MS;
+                    authFailCount = 0;
+                    setAuthError('auth-login-error', 'ລອງຜິດຫຼາຍເກີນໄປ ກະລຸນາລໍຖ້າ 30 ວິນາທີ ຫຼື ກົດ "ລືມລະຫັດຜ່ານ?"');
+                } else {
+                    setAuthError('auth-login-error', 'ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ');
+                }
+                input.focus();
+            }
+        }
+
+        async function submitAdminSetup(e) {
+            e.preventDefault();
+            if (hasAdminPassword()) { showAuthMode('login'); return; }
+            const pw = document.getElementById('auth-setup-pw').value;
+            const pw2 = document.getElementById('auth-setup-pw2').value;
+            const err = validateNewPassword(pw, pw2);
+            if (err) { setAuthError('auth-setup-error', err); return; }
+            await setAdminPassword(pw);
+            showToast('ຕັ້ງລະຫັດຜ່ານຫນ້າແອັດມິນສຳເລັດແລ້ວ');
+            unlockAdmin();
+        }
+
+        async function submitAdminReset(e) {
+            e.preventDefault();
+            const code = document.getElementById('auth-reset-code').value.trim();
+            const pw = document.getElementById('auth-reset-pw').value;
+            const pw2 = document.getElementById('auth-reset-pw2').value;
+            const now = Date.now();
+            if (now < authLockedUntil) {
+                setAuthError('auth-forgot-error', `ລອງຜິດຫຼາຍເກີນໄປ ກະລຸນາລໍຖ້າ ${Math.ceil((authLockedUntil - now) / 1000)} ວິນາທີ`);
+                return;
+            }
+            const sha = await sha256Hex(code);
+            const codeOk = sha ? (sha === LAOMARKET_RESET_CODE_SHA256) : (fallbackHash(code) === LAOMARKET_RESET_CODE_FALLBACK);
+            if (!code || !codeOk) {
+                authFailCount++;
+                if (authFailCount >= MAX_LOGIN_ATTEMPTS) { authLockedUntil = Date.now() + LOGIN_LOCK_MS; authFailCount = 0; }
+                setAuthError('auth-forgot-error', 'ລະຫັດປົດລັອກບໍ່ຖືກຕ້ອງ ກະລຸນາຕິດຕໍ່ແອັດມິນຫຼັກຂອງ LaoMarket');
+                return;
+            }
+            const err = validateNewPassword(pw, pw2);
+            if (err) { setAuthError('auth-forgot-error', err); return; }
+            await setAdminPassword(pw);
+            authFailCount = 0;
+            showAuthMode('login');
+            showToast('ປ່ຽນລະຫັດຜ່ານໃໝ່ສຳເລັດແລ້ວ ກະລຸນາເຂົ້າສູ່ລະບົບດ້ວຍລະຫັດຜ່ານໃໝ່');
+        }
+
+        async function changeAdminPassword(e) {
+            e.preventDefault();
+            const form = e.target;
+            const current = document.getElementById('setting-admin-current-pw').value;
+            const pw = document.getElementById('setting-admin-new-pw').value;
+            const pw2 = document.getElementById('setting-admin-confirm-pw').value;
+            if (!(await verifyAdminPassword(current))) {
+                showToast('ລະຫັດຜ່ານປັດຈຸບັນບໍ່ຖືກຕ້ອງ', 'error');
+                return;
+            }
+            const err = validateNewPassword(pw, pw2);
+            if (err) { showToast(err, 'error'); return; }
+            await setAdminPassword(pw);
+            form.reset();
+            showToast('ປ່ຽນລະຫັດຜ່ານຫນ້າແອັດມິນສຳເລັດແລ້ວ');
+        }
+
+        // ------------------------------------------------------------
+        // Application Initialization
+        // ------------------------------------------------------------
+        window.onload = function() {
+            loadState();
+            initClock();
+            renderCategoryPills();
+            renderCategoryOptions();
+            renderProducts();
+            renderCart();
+            setupHardwareBarcodeScanner();
+            renderCategoryManagerList();
+            populateSettingsForm();
+            applyHeaderAndReceiptSettings();
+            renderBackupList();
+            renderCurrencyTable();
+            renderWalletList();
+            checkAutoBackup();
+            changeLanguage('th');
+        };
+
+        // ------------------------------------------------------------
+        // Category Management
+        // ------------------------------------------------------------
+        function renderCategoryPills() {
+            const container = document.getElementById('category-pills');
+            if (!container) return;
+
+            let html = '';
+            const isAllActive = activeCategory === 'all';
+            html += `<button onclick="filterCategory('all')" class="cat-btn ${isAllActive ? 'active bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all">${t('cat_all')}</button>`;
+
+            categories.forEach(cat => {
+                const isActive = activeCategory === cat;
+                html += `<button onclick="filterCategory('${escapeAttr(cat)}')" class="cat-btn ${isActive ? 'active bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} px-4 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all">${escapeHtml(cat)}</button>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderCategoryOptions() {
+            const select = document.getElementById('prod-category');
+            if (select) {
+                select.innerHTML = categories.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+            }
+            const filterSelect = document.getElementById('admin-product-filter-cat');
+            if (filterSelect) {
+                filterSelect.innerHTML = `<option value="all">ทุกหมวดหมู่</option>` + categories.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+            }
+        }
+
+        function renderCategoryManagerList() {
+            const container = document.getElementById('category-manager-list');
+            if (!container) return;
+            if (categories.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400">ยังไม่มีหมวดหมู่ในระบบ</p>';
+                return;
+            }
+            container.innerHTML = categories.map(cat => `
+                <span class="inline-flex items-center gap-1.5 bg-sky-50 text-sky-700 border border-sky-200 px-3 py-1.5 rounded-full text-xs font-medium">
+                    ${escapeHtml(cat)}
+                    <button onclick="removeCategory('${escapeAttr(cat)}')" class="text-sky-400 hover:text-rose-500" title="ลบหมวดหมู่">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </span>
+            `).join('');
+        }
+
+        function addCategory(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-category-input');
+            const name = input.value.trim();
+            if (!name) return;
+            if (categories.includes(name)) {
+                showToast('มีหมวดหมู่นี้อยู่แล้ว', 'error');
+                return;
+            }
+            categories.push(name);
+            input.value = '';
+            saveState();
+            renderCategoryManagerList();
+            renderCategoryPills();
+            renderCategoryOptions();
+            showToast('เพิ่มหมวดหมู่สำเร็จ');
+        }
+
+        function removeCategory(name) {
+            const inUse = products.some(p => p.category === name);
+            if (inUse && !confirm(`หมวดหมู่ "${name}" ยังมีสินค้าอยู่ในระบบ ต้องการลบหมวดหมู่นี้หรือไม่? สินค้าที่เกี่ยวข้องจะยังคงอยู่แต่ไม่มีหมวดหมู่ที่ตรงกัน`)) {
+                return;
+            }
+            categories = categories.filter(c => c !== name);
+            if (activeCategory === name) activeCategory = 'all';
+            saveState();
+            renderCategoryManagerList();
+            renderCategoryPills();
+            renderCategoryOptions();
+            renderProducts();
+            renderAdminProductTable();
+            showToast('ลบหมวดหมู่เรียบร้อยแล้ว');
+        }
+
+        function filterCategory(cat) {
+            activeCategory = cat;
+            renderCategoryPills();
+            renderProducts();
+        }
+
+        // ------------------------------------------------------------
+        // Product Catalog (POS side)
+        // ------------------------------------------------------------
+        function renderProducts(searchQueryRaw) {
+            const searchInput = document.getElementById('barcode-input');
+            const searchQuery = (searchQueryRaw !== undefined ? searchQueryRaw : (searchInput ? searchInput.value : '')).trim().toLowerCase();
+
+            const grid = document.getElementById('product-grid');
+            const noMsg = document.getElementById('no-products-msg');
+            grid.innerHTML = '';
+
+            let filtered = products.filter(p => {
+                if (p.active === false) return false;
+                const matchCat = (activeCategory === 'all' || p.category === activeCategory);
+                const matchSearch = (p.name.toLowerCase().includes(searchQuery) || p.barcode.toLowerCase().includes(searchQuery));
+                return matchCat && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                noMsg.classList.remove('hidden');
+                return;
+            } else {
+                noMsg.classList.add('hidden');
+            }
+
+            const threshold = storeSettings.lowStockThreshold || 5;
+
+            filtered.forEach(p => {
+                const effectiveThreshold = (p.lowStock !== null && p.lowStock !== undefined && p.lowStock !== '') ? p.lowStock : threshold;
+                const isOutOfStock = p.stock <= 0;
+                const isLowStock = p.stock > 0 && p.stock <= effectiveThreshold;
+
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-all cursor-pointer group ${isOutOfStock ? 'opacity-60 bg-slate-50' : ''}`;
+                card.onclick = () => { if (!isOutOfStock) addToCart(p.id); };
+
+                card.innerHTML = `
+                    <div class="relative h-28 bg-slate-100 overflow-hidden">
+                        <img src="${escapeAttr(p.image)}" alt="${escapeAttr(p.name)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='https://placehold.co/300x200/e2e8f0/64748b?text=Product'">
+                        <span class="absolute top-2 right-2 bg-slate-900/70 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded-full font-mono">${escapeHtml(p.barcode)}</span>
+                        ${isLowStock ? `<span class="absolute bottom-2 left-2 bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">${t('lbl_stock_low')}</span>` : ''}
+                        ${isOutOfStock ? `<span class="absolute inset-0 bg-slate-900/60 flex items-center justify-center text-white text-xs font-bold">${t('lbl_out_of_stock')}</span>` : ''}
+                    </div>
+                    <div class="p-3 flex-1 flex flex-col justify-between space-y-2">
+                        <div>
+                            <span class="text-[10px] text-sky-600 font-semibold uppercase tracking-wider">${escapeHtml(p.category)}</span>
+                            <h3 class="font-bold text-slate-800 text-xs line-clamp-2 leading-snug">${escapeHtml(p.name)}</h3>
+                        </div>
+                        <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+                            <div>
+                                <span class="text-sm font-bold font-mono text-sky-600">${storeSettings.currency}${p.price.toFixed(2)}</span>
+                                <div class="text-[10px] text-slate-400">${t('lbl_stock_rem')}: ${p.stock}</div>
+                            </div>
+                            <button class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 group-hover:bg-sky-600 group-hover:text-white flex items-center justify-center transition-colors">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('barcode-input');
+            input.value = '';
+            document.getElementById('clear-search-btn').classList.add('hidden');
+            renderProducts('');
+            input.focus();
+        }
+
+        // ------------------------------------------------------------
+        // Cart Actions
+        // ------------------------------------------------------------
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const existingItem = currentCart.find(item => item.id === productId);
+            if (existingItem) {
+                if (existingItem.qty < product.stock) {
+                    existingItem.qty += 1;
+                } else {
+                    showToast(`"${product.name}" ${t('msg_stock_exceeded')}`, "error");
+                    return;
+                }
+            } else {
+                if (product.stock > 0) {
+                    currentCart.push({ id: product.id, name: product.name, price: product.price, cost: product.cost || 0, barcode: product.barcode, qty: 1 });
+                } else {
+                    showToast(t('lbl_out_of_stock'), "error");
+                    return;
+                }
+            }
+            renderCart();
+        }
+
+        function updateQty(productId, delta) {
+            const item = currentCart.find(i => i.id === productId);
+            const product = products.find(p => p.id === productId);
+            if (!item) return;
+
+            const newQty = item.qty + delta;
+            if (newQty <= 0) {
+                removeFromCart(productId);
+            } else if (!product || newQty <= product.stock) {
+                item.qty = newQty;
+                renderCart();
+            } else {
+                showToast(`${t('msg_stock_exceeded')}`, "error");
+            }
+        }
+
+        function removeFromCart(productId) {
+            currentCart = currentCart.filter(i => i.id !== productId);
+            renderCart();
+        }
+
+        function clearCart() {
+            currentCart = [];
+            currentDiscount = 0;
+            const discountInput = document.getElementById('discount-input');
+            if (discountInput) discountInput.value = 0;
+            renderCart();
+        }
+
+        function applyDiscount(value) {
+            let val = parseFloat(value);
+            if (isNaN(val) || val < 0) val = 0;
+            currentDiscount = val;
+            renderCart();
+        }
+
+        function getVatRate() {
+            const rate = parseFloat(storeSettings.vatRate);
+            return isNaN(rate) ? 0 : rate / 100;
+        }
+
+        function calculateCartTotals() {
+            let subtotalGross = 0; // price*qty (VAT-inclusive prices)
+            let totalItems = 0;
+            currentCart.forEach(item => {
+                subtotalGross += item.price * item.qty;
+                totalItems += item.qty;
+            });
+
+            const discount = Math.min(currentDiscount, subtotalGross);
+            const netAfterDiscount = Math.max(0, subtotalGross - discount);
+            const vatRate = getVatRate();
+            const vat = netAfterDiscount - (netAfterDiscount / (1 + vatRate));
+            const subtotalExVat = netAfterDiscount - vat;
+            const total = netAfterDiscount;
+
+            return { subtotalGross, discount, subtotalExVat, vat, total, totalItems };
+        }
+
+        function calculateCartTotal() {
+            return calculateCartTotals().total;
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-container');
+            const emptyState = document.getElementById('cart-empty-state');
+            container.innerHTML = '';
+
+            if (currentCart.length === 0) {
+                emptyState.classList.remove('hidden');
+                document.getElementById('btn-pay-cash').disabled = true;
+                document.getElementById('btn-pay-qr').disabled = true;
+            } else {
+                emptyState.classList.add('hidden');
+                document.getElementById('btn-pay-cash').disabled = false;
+                document.getElementById('btn-pay-qr').disabled = false;
+            }
+
+            currentCart.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                const div = document.createElement('div');
+                div.className = "py-3 flex items-center justify-between gap-2";
+                div.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-xs text-slate-800 truncate">${escapeHtml(item.name)}</h4>
+                        <div class="text-[11px] text-slate-400 font-mono">${storeSettings.currency}${item.price.toFixed(2)} x ${item.qty}</div>
+                    </div>
+                    <div class="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl">
+                        <button onclick="updateQty(${item.id}, -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm text-slate-600 hover:text-sky-600 flex items-center justify-center font-bold text-xs">-</button>
+                        <span class="w-6 text-center font-bold text-xs font-mono">${item.qty}</span>
+                        <button onclick="updateQty(${item.id}, 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm text-slate-600 hover:text-sky-600 flex items-center justify-center font-bold text-xs">+</button>
+                    </div>
+                    <div class="text-right min-w-[65px]">
+                        <span class="font-bold font-mono text-xs text-slate-800">${storeSettings.currency}${itemTotal.toFixed(2)}</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            const totals = calculateCartTotals();
+
+            document.getElementById('summary-subtotal').innerText = `${storeSettings.currency}${totals.subtotalExVat.toFixed(2)}`;
+            const vatLabel = document.querySelector('[data-i18n="lbl_vat"]');
+            if (vatLabel) vatLabel.innerText = `${t('lbl_vat')} (${storeSettings.vatRate}%)`;
+            document.getElementById('summary-vat').innerText = `${storeSettings.currency}${totals.vat.toFixed(2)}`;
+            document.getElementById('summary-total').innerText = `${storeSettings.currency}${totals.total.toFixed(2)}`;
+            document.getElementById('summary-item-count').innerText = `${totals.totalItems} ${t('lbl_items_unit')}`;
+        }
+
+        // ------------------------------------------------------------
+        // Barcode handling (hardware scanner + manual search)
+        // ------------------------------------------------------------
+        function handleBarcodeScanned(barcodeOrQuery) {
+            const query = barcodeOrQuery.trim().toLowerCase();
+            const foundProduct = products.find(p => p.active !== false && (p.barcode.toLowerCase() === query || p.name.toLowerCase() === query));
+            if (foundProduct) {
+                addToCart(foundProduct.id);
+                showToast(`"${foundProduct.name}" ${t('msg_added')}`);
+            } else {
+                showToast(`${t('msg_not_found')}: ${barcodeOrQuery}`, "error");
+            }
+        }
+
+        function setupHardwareBarcodeScanner() {
+            document.addEventListener('keydown', function(e) {
+                const activeEl = document.activeElement;
+                if (activeEl && activeEl.tagName === 'INPUT' && activeEl.id !== 'barcode-input') return;
+
+                const currentTime = Date.now();
+                if (currentTime - lastKeyTime > 100) {
+                    barcodeBuffer = '';
+                }
+                lastKeyTime = currentTime;
+
+                if (e.key === 'Enter') {
+                    if (barcodeBuffer.length >= 3) {
+                        e.preventDefault();
+                        handleBarcodeScanned(barcodeBuffer.trim());
+                        barcodeBuffer = '';
+                        const bi = document.getElementById('barcode-input');
+                        if (bi) bi.value = '';
+                    }
+                } else if (e.key.length === 1) {
+                    barcodeBuffer += e.key;
+                }
+            });
+
+            const searchInput = document.getElementById('barcode-input');
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
+                document.getElementById('clear-search-btn').classList.toggle('hidden', query === '');
+                renderProducts(query);
+            });
+
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const query = this.value.trim();
+                    if (query) {
+                        handleBarcodeScanned(query);
+                        this.value = '';
+                        renderProducts('');
+                        document.getElementById('clear-search-btn').classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // ------------------------------------------------------------
+        // Mobile Camera Scanner
+        // ------------------------------------------------------------
+        function openCameraScanner() {
+            document.getElementById('camera-modal').classList.remove('hidden');
+            if (!html5QrCodeScanner) {
+                html5QrCodeScanner = new Html5Qrcode("interactive-reader");
+            }
+
+            const config = { fps: 10, qrbox: { width: 250, height: 180 } };
+            html5QrCodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                showToast("ไม่สามารถเปิดกล้องได้: " + err, "error");
+                closeCameraScanner();
+            });
+        }
+
+        function closeCameraScanner() {
+            if (html5QrCodeScanner && html5QrCodeScanner.isScanning) {
+                html5QrCodeScanner.stop().then(() => {
+                    document.getElementById('camera-modal').classList.add('hidden');
+                }).catch(() => {
+                    document.getElementById('camera-modal').classList.add('hidden');
+                });
+            } else {
+                document.getElementById('camera-modal').classList.add('hidden');
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            closeCameraScanner();
+            handleBarcodeScanned(decodedText);
+        }
+
+        // ------------------------------------------------------------
+        // Admin Subtab Navigation
+        // ------------------------------------------------------------
+        function switchAdminSubtab(subtab) {
+            document.querySelectorAll('#tab-admin [id^="admin-subtab-"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+                btn.className = "admin-nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all";
+            });
+
+            document.getElementById(`admin-subtab-${subtab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`admin-menu-${subtab}`);
+            activeBtn.className = "admin-nav-btn active w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-sky-600 bg-sky-50 transition-all";
+
+            if (subtab === 'products') renderAdminProductTable();
+            if (subtab === 'history') renderAdminSalesHistoryTable();
+            if (subtab === 'settings') { populateSettingsForm(); renderCategoryManagerList(); renderBackupList(); }
+            if (subtab === 'wallets') { renderCurrencyTable(); renderWalletList(); populateWalletFormSelectors(); }
+            if (subtab === 'dashboard') {
+                updateDashboardMetrics();
+                if (salesTrendChart && paymentBreakdownChart) {
+                    salesTrendChart.resize();
+                    paymentBreakdownChart.resize();
+                }
+            }
+        }
+
+        // ------------------------------------------------------------
+        // Payment Modal
+        // ------------------------------------------------------------
+        function openPaymentModal(mode) {
+            currentPaymentMode = mode;
+            const modal = document.getElementById('payment-modal');
+            const total = calculateCartTotal();
+
+            document.getElementById('pay-modal-title').innerText = mode === 'CASH' ? 'รับชำระเงินด้วยเงินสด' : 'รับชำระด้วย QR Code โอนเงิน';
+            document.getElementById('pay-modal-amount').innerText = `${storeSettings.currency}${total.toFixed(2)}`;
+
+            if (mode === 'CASH') {
+                document.getElementById('pay-cash-section').classList.remove('hidden');
+                document.getElementById('pay-qr-section').classList.add('hidden');
+                const cashInput = document.getElementById('cash-received-input');
+                cashInput.value = '';
+                document.getElementById('cash-change-display').innerText = `${storeSettings.currency}0.00`;
+                setTimeout(() => cashInput.focus(), 100);
+            } else {
+                document.getElementById('pay-cash-section').classList.add('hidden');
+                document.getElementById('pay-qr-section').classList.remove('hidden');
+                document.getElementById('promptpay-number-display').innerText = `PromptPay: ${storeSettings.promptpay}`;
+
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=PROMPTPAY_${encodeURIComponent(storeSettings.promptpay)}_AMOUNT_${total.toFixed(2)}`;
+                document.getElementById('qr-code-img').src = qrUrl;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.add('hidden');
+        }
+
+        function setQuickCash(amount) {
+            const total = calculateCartTotal();
+            const input = document.getElementById('cash-received-input');
+            if (amount === 'exact') {
+                input.value = total.toFixed(2);
+            } else {
+                input.value = amount;
+            }
+            calculateChange();
+        }
+
+        function calculateChange() {
+            const total = calculateCartTotal();
+            const received = parseFloat(document.getElementById('cash-received-input').value) || 0;
+            const change = received - total;
+            const changeDisplay = document.getElementById('cash-change-display');
+
+            if (change >= 0) {
+                changeDisplay.innerText = `${storeSettings.currency}${change.toFixed(2)}`;
+                changeDisplay.className = "font-mono text-xl font-bold text-emerald-600";
+            } else {
+                changeDisplay.innerText = `ขาดอีก ${storeSettings.currency}${Math.abs(change).toFixed(2)}`;
+                changeDisplay.className = "font-mono text-base font-bold text-rose-500";
+            }
+        }
+
+        function confirmPayment() {
+            const totals = calculateCartTotals();
+            const total = totals.total;
+            let paidAmount = total;
+            let changeAmount = 0;
+
+            if (currentPaymentMode === 'CASH') {
+                paidAmount = parseFloat(document.getElementById('cash-received-input').value) || 0;
+                if (paidAmount < total) {
+                    showToast("จำนวนเงินที่รับมาไม่ครบตามยอดชำระ", "error");
+                    return;
+                }
+                changeAmount = paidAmount - total;
+            }
+
+            // Validate & deduct inventory stock
+            for (const cartItem of currentCart) {
+                const prod = products.find(p => p.id === cartItem.id);
+                if (!prod || prod.stock < cartItem.qty) {
+                    showToast(`สินค้า "${cartItem.name}" มีสต็อกไม่เพียงพอ`, "error");
+                    return;
+                }
+            }
+            currentCart.forEach(cartItem => {
+                const prod = products.find(p => p.id === cartItem.id);
+                if (prod) prod.stock -= cartItem.qty;
+            });
+
+            const orderId = 'ORD-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Date.now().toString().slice(-5);
+            const orderRecord = {
+                id: orderId,
+                date: new Date().toLocaleString('th-TH'),
+                timestamp: Date.now(),
+                items: currentCart.map(i => ({ id: i.id, name: i.name, price: i.price, cost: i.cost || 0, qty: i.qty })),
+                subtotal: totals.subtotalExVat,
+                vat: totals.vat,
+                discount: totals.discount,
+                total: total,
+                paid: paidAmount,
+                change: changeAmount,
+                paymentMode: currentPaymentMode,
+                voided: false
+            };
+
+            salesHistory.unshift(orderRecord);
+            saveState();
+
+            closePaymentModal();
+            renderProducts();
+            openReceiptModal(orderRecord);
+            clearCart();
+            updateDashboardMetrics();
+            showToast(t('msg_pay_success'));
+        }
+
+        // ------------------------------------------------------------
+        // Receipt Modal
+        // ------------------------------------------------------------
+        function openReceiptModal(order) {
+            document.getElementById('receipt-store-title').innerText = storeSettings.name;
+            document.getElementById('receipt-store-phone').innerText = `โทร. ${storeSettings.phone}`;
+            document.getElementById('rec-id').innerText = order.id + (order.voided ? ' (ยกเลิกแล้ว)' : '');
+            document.getElementById('rec-date').innerText = order.date;
+            document.getElementById('rec-pay-type').innerText = order.paymentMode === 'CASH' ? 'เงินสด (Cash)' : 'QR โอนเงิน (PromptPay)';
+
+            const listContainer = document.getElementById('rec-items-list');
+            listContainer.innerHTML = '';
+            order.items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between text-[11px]';
+                row.innerHTML = `
+                    <span class="truncate max-w-[180px]">${escapeHtml(item.name)} x${item.qty}</span>
+                    <span class="font-mono">${storeSettings.currency}${(item.price * item.qty).toFixed(2)}</span>
+                `;
+                listContainer.appendChild(row);
+            });
+
+            document.getElementById('rec-subtotal').innerText = `${storeSettings.currency}${order.subtotal.toFixed(2)}`;
+            document.getElementById('rec-vat').innerText = `${storeSettings.currency}${order.vat.toFixed(2)}`;
+            document.getElementById('rec-total').innerText = `${storeSettings.currency}${order.total.toFixed(2)}`;
+            document.getElementById('rec-paid').innerText = `${storeSettings.currency}${order.paid.toFixed(2)}`;
+            document.getElementById('rec-change').innerText = `${storeSettings.currency}${order.change.toFixed(2)}`;
+
+            const footerEl = document.getElementById('rec-footer-note');
+            if (footerEl) footerEl.innerText = storeSettings.receiptFooter;
+
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receipt-modal').classList.add('hidden');
+        }
+
+        function reprintOrder(orderId) {
+            const order = salesHistory.find(o => o.id === orderId);
+            if (order) openReceiptModal(order);
+        }
+
+        // ------------------------------------------------------------
+        // Admin: Product CRUD
+        // ------------------------------------------------------------
+        function renderAdminProductTable() {
+            const tbody = document.getElementById('admin-product-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const searchEl = document.getElementById('admin-product-search');
+            const catEl = document.getElementById('admin-product-filter-cat');
+            const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            const catFilter = catEl ? catEl.value : 'all';
+
+            const threshold = storeSettings.lowStockThreshold || 5;
+
+            const filtered = products.filter(p => {
+                const matchSearch = !search || p.name.toLowerCase().includes(search) || p.barcode.toLowerCase().includes(search);
+                const matchCat = catFilter === 'all' || p.category === catFilter;
+                return matchSearch && matchCat;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">ไม่พบสินค้าที่ตรงกับเงื่อนไข</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const effectiveThreshold = (p.lowStock !== null && p.lowStock !== undefined && p.lowStock !== '') ? p.lowStock : threshold;
+                const isLow = p.stock <= effectiveThreshold;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100" + (p.active === false ? ' opacity-50' : '');
+                tr.innerHTML = `
+                    <td class="p-3">
+                        <img src="${escapeAttr(p.image)}" class="w-10 h-10 rounded-lg object-cover border" onerror="this.src='https://placehold.co/100?text=P'">
+                    </td>
+                    <td class="p-3 font-semibold text-slate-800">${escapeHtml(p.name)}${p.active === false ? ' <span class="text-[10px] text-slate-400">(ปิดขาย)</span>' : ''}</td>
+                    <td class="p-3 font-mono text-slate-500">${escapeHtml(p.barcode)}</td>
+                    <td class="p-3"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-semibold">${escapeHtml(p.category)}</span></td>
+                    <td class="p-3 text-right font-mono font-bold text-sky-600">${storeSettings.currency}${p.price.toFixed(2)}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <button onclick="quickAdjustStock(${p.id}, -1)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">-</button>
+                            <span class="px-2 py-1 rounded-md font-mono font-bold text-xs min-w-[2.5rem] inline-block ${isLow ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}">
+                                ${p.stock}
+                            </span>
+                            <button onclick="quickAdjustStock(${p.id}, 1)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">+</button>
+                        </div>
+                    </td>
+                    <td class="p-3 text-center space-x-1">
+                        <button onclick="editProduct(${p.id})" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="toggleProductActive(${p.id})" class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg" title="${p.active === false ? 'เปิดขาย' : 'ปิดขาย'}"><i class="fa-solid ${p.active === false ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+                        <button onclick="deleteProduct(${p.id})" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function quickAdjustStock(id, delta) {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+            const newStock = prod.stock + delta;
+            if (newStock < 0) return;
+            prod.stock = newStock;
+            saveState();
+            renderAdminProductTable();
+            renderProducts();
+            updateDashboardMetrics();
+        }
+
+        function toggleProductActive(id) {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+            prod.active = prod.active === false ? true : false;
+            saveState();
+            renderAdminProductTable();
+            renderProducts();
+            showToast(prod.active ? 'เปิดขายสินค้าแล้ว' : 'ปิดการขายสินค้าแล้ว');
+        }
+
+        function openProductModal(prodId = null) {
+            document.getElementById('prod-id').value = prodId || '';
+            document.getElementById('prod-modal-title').innerText = prodId ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่';
+            renderCategoryOptions();
+
+            if (prodId) {
+                const prod = products.find(p => p.id === prodId);
+                if (prod) {
+                    document.getElementById('prod-name').value = prod.name;
+                    document.getElementById('prod-barcode').value = prod.barcode;
+                    document.getElementById('prod-category').value = prod.category;
+                    document.getElementById('prod-price').value = prod.price;
+                    document.getElementById('prod-cost').value = prod.cost || '';
+                    document.getElementById('prod-stock').value = prod.stock;
+                    document.getElementById('prod-lowstock').value = (prod.lowStock !== null && prod.lowStock !== undefined) ? prod.lowStock : '';
+                    document.getElementById('prod-image').value = prod.image;
+                    document.getElementById('prod-active').checked = prod.active !== false;
+                }
+            } else {
+                document.getElementById('prod-name').value = '';
+                document.getElementById('prod-barcode').value = '885' + Math.floor(100000000 + Math.random() * 900000000);
+                document.getElementById('prod-price').value = '';
+                document.getElementById('prod-cost').value = '';
+                document.getElementById('prod-stock').value = '10';
+                document.getElementById('prod-lowstock').value = '';
+                document.getElementById('prod-image').value = '';
+                document.getElementById('prod-active').checked = true;
+                if (categories.length) document.getElementById('prod-category').value = categories[0];
+            }
+
+            document.getElementById('product-modal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+        }
+
+        function saveProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value.trim();
+            const barcode = document.getElementById('prod-barcode').value.trim();
+            const category = document.getElementById('prod-category').value;
+            const price = parseFloat(document.getElementById('prod-price').value);
+            const costRaw = document.getElementById('prod-cost').value;
+            const cost = costRaw === '' ? 0 : parseFloat(costRaw);
+            const stock = parseInt(document.getElementById('prod-stock').value, 10);
+            const lowStockRaw = document.getElementById('prod-lowstock').value;
+            const lowStock = lowStockRaw === '' ? null : parseInt(lowStockRaw, 10);
+            const image = document.getElementById('prod-image').value.trim() || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80';
+            const active = document.getElementById('prod-active').checked;
+
+            if (!name || !barcode || isNaN(price) || price < 0 || isNaN(stock) || stock < 0) {
+                showToast('กรุณากรอกข้อมูลสินค้าให้ครบถ้วนและถูกต้อง', 'error');
+                return;
+            }
+
+            const duplicateBarcode = products.find(p => p.barcode === barcode && String(p.id) !== String(id));
+            if (duplicateBarcode) {
+                showToast('มีสินค้าอื่นใช้บาร์โค้ด/SKU นี้อยู่แล้ว', 'error');
+                return;
+            }
+
+            if (id) {
+                const idx = products.findIndex(p => String(p.id) === String(id));
+                if (idx !== -1) products[idx] = { id: products[idx].id, name, barcode, category, price, cost, stock, lowStock, image, active };
+            } else {
+                products.push({ id: Date.now(), name, barcode, category, price, cost, stock, lowStock, image, active });
+            }
+
+            saveState();
+            closeProductModal();
+            renderAdminProductTable();
+            renderProducts();
+            updateDashboardMetrics();
+            showToast("บันทึกข้อมูลสินค้าสำเร็จ");
+        }
+
+        function editProduct(id) {
+            openProductModal(id);
+        }
+
+        function deleteProduct(id) {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+            if (!confirm(`ต้องการลบสินค้า "${prod.name}" ใช่หรือไม่?`)) return;
+            products = products.filter(p => p.id !== id);
+            saveState();
+            renderAdminProductTable();
+            renderProducts();
+            updateDashboardMetrics();
+            showToast("ลบรายการสินค้าเรียบร้อยแล้ว");
+        }
+
+        // ------------------------------------------------------------
+        // Admin: Sales History
+        // ------------------------------------------------------------
+        function renderAdminSalesHistoryTable() {
+            const tbody = document.getElementById('admin-history-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const searchEl = document.getElementById('admin-history-search');
+            const payEl = document.getElementById('admin-history-filter-pay');
+            const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            const payFilter = payEl ? payEl.value : 'all';
+
+            const filtered = salesHistory.filter(o => {
+                const matchSearch = !search || o.id.toLowerCase().includes(search);
+                const matchPay = payFilter === 'all' || o.paymentMode === payFilter;
+                return matchSearch && matchPay;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">ไม่พบรายการที่ตรงกับเงื่อนไข</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(order => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100" + (order.voided ? ' opacity-50' : '');
+                const statusBadge = order.voided
+                    ? `<span class="px-2 py-0.5 bg-rose-100 text-rose-600 rounded-full text-[10px] font-bold">ยกเลิกแล้ว</span>`
+                    : `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">สำเร็จ</span>`;
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-bold text-slate-800">${escapeHtml(order.id)}</td>
+                    <td class="p-3 text-slate-500">${escapeHtml(order.date)}</td>
+                    <td class="p-3 font-semibold">${order.paymentMode === 'CASH' ? '<span class="text-emerald-600"><i class="fa-solid fa-money-bill mr-1"></i> เงินสด</span>' : '<span class="text-sky-600"><i class="fa-solid fa-qrcode mr-1"></i> QR Code</span>'}</td>
+                    <td class="p-3 text-right font-mono font-bold text-slate-800">${storeSettings.currency}${order.total.toFixed(2)}</td>
+                    <td class="p-3 text-center">${statusBadge}</td>
+                    <td class="p-3 text-center space-x-1 whitespace-nowrap">
+                        <button onclick="reprintOrder('${escapeAttr(order.id)}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-receipt mr-1"></i> ใบเสร็จ
+                        </button>
+                        ${!order.voided ? `<button onclick="voidOrder('${escapeAttr(order.id)}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> ยกเลิก
+                        </button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function voidOrder(orderId) {
+            const order = salesHistory.find(o => o.id === orderId);
+            if (!order || order.voided) return;
+            if (!confirm(`ต้องการยกเลิกบิล ${orderId} และคืนสินค้าเข้าสต็อกหรือไม่?`)) return;
+
+            order.items.forEach(item => {
+                const prod = products.find(p => p.id === item.id);
+                if (prod) prod.stock += item.qty;
+            });
+            order.voided = true;
+
+            saveState();
+            renderAdminSalesHistoryTable();
+            renderAdminProductTable();
+            renderProducts();
+            updateDashboardMetrics();
+            showToast('ยกเลิกบิลและคืนสต็อกเรียบร้อยแล้ว');
+        }
+
+        function clearSalesHistory() {
+            if (!confirm('ต้องการล้างประวัติการขายทั้งหมดหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+            salesHistory = [];
+            saveState();
+            renderAdminSalesHistoryTable();
+            updateDashboardMetrics();
+            showToast('ล้างประวัติการขายเรียบร้อยแล้ว');
+        }
+
+        // ------------------------------------------------------------
+        // Admin: Settings
+        // ------------------------------------------------------------
+        function populateSettingsForm() {
+            const nameEl = document.getElementById('setting-store-name');
+            if (!nameEl) return;
+            nameEl.value = storeSettings.name;
+            document.getElementById('setting-store-phone').value = storeSettings.phone;
+            document.getElementById('setting-promptpay').value = storeSettings.promptpay;
+            document.getElementById('setting-receipt-footer').value = storeSettings.receiptFooter;
+            document.getElementById('setting-vat-rate').value = storeSettings.vatRate;
+            document.getElementById('setting-low-stock').value = storeSettings.lowStockThreshold;
+            document.getElementById('setting-currency').value = storeSettings.currency;
+        }
+
+        function applyHeaderAndReceiptSettings() {
+            const headerLabel = document.getElementById('header-store-name');
+            headerLabel.innerText = storeSettings.name;
+        }
+
+        function saveSettings(e) {
+            e.preventDefault();
+            storeSettings.name = document.getElementById('setting-store-name').value.trim() || storeSettings.name;
+            storeSettings.phone = document.getElementById('setting-store-phone').value.trim();
+            storeSettings.promptpay = document.getElementById('setting-promptpay').value.trim();
+            storeSettings.receiptFooter = document.getElementById('setting-receipt-footer').value.trim();
+
+            const vatRate = parseFloat(document.getElementById('setting-vat-rate').value);
+            storeSettings.vatRate = isNaN(vatRate) ? storeSettings.vatRate : vatRate;
+
+            const lowStock = parseInt(document.getElementById('setting-low-stock').value, 10);
+            storeSettings.lowStockThreshold = isNaN(lowStock) ? storeSettings.lowStockThreshold : lowStock;
+
+            const currency = document.getElementById('setting-currency').value.trim();
+            storeSettings.currency = currency || storeSettings.currency;
+
+            saveState();
+            applyHeaderAndReceiptSettings();
+            renderProducts();
+            renderCart();
+            renderAdminProductTable();
+            updateDashboardMetrics();
+            showToast("บันทึกการตั้งค่าร้านค้าสำเร็จ");
+        }
+
+        // ------------------------------------------------------------
+        // Mock sales history (used only when no saved data exists)
+        // ------------------------------------------------------------
+        function generateMockSalesHistory() {
+            const now = Date.now();
+            const modes = ['CASH', 'QR'];
+            for (let i = 1; i <= 8; i++) {
+                const mode = modes[i % 2];
+                const total = Math.floor(Math.random() * 300) + 50;
+                const vat = total - (total / 1.07);
+                salesHistory.push({
+                    id: 'ORD-DEMO-' + i,
+                    date: `10/09/2026 0${i + 1}:30`,
+                    timestamp: now - (i * 3600000),
+                    items: [{ id: 0, name: 'สินค้าสาธิต ' + i, qty: 1, price: total, cost: total * 0.55 }],
+                    subtotal: total - vat,
+                    vat: vat,
+                    discount: 0,
+                    total: total,
+                    paid: total + 50,
+                    change: 50,
+                    paymentMode: mode,
+                    voided: false
+                });
+            }
+        }
+
+        // ------------------------------------------------------------
+        // Dashboard Metrics & Charts
+        // ------------------------------------------------------------
+        function updateDashboardMetrics() {
+            let todayRevenue = 0;
+            let cashTotal = 0;
+            let qrTotal = 0;
+            let grossProfit = 0;
+            let completedCount = 0;
+
+            salesHistory.forEach(s => {
+                if (s.voided) return;
+                completedCount += 1;
+                todayRevenue += s.total;
+                if (s.paymentMode === 'CASH') cashTotal += s.total;
+                if (s.paymentMode === 'QR') qrTotal += s.total;
+
+                s.items.forEach(item => {
+                    const cost = (item.cost !== undefined && item.cost !== null) ? item.cost : item.price * 0.6;
+                    grossProfit += (item.price - cost) * item.qty;
+                });
+            });
+
+            const threshold = storeSettings.lowStockThreshold || 5;
+            const lowStockCount = products.filter(p => {
+                const eff = (p.lowStock !== null && p.lowStock !== undefined && p.lowStock !== '') ? p.lowStock : threshold;
+                return p.stock <= eff;
+            }).length;
+            const avgOrder = completedCount > 0 ? (todayRevenue / completedCount) : 0;
+
+            const revEl = document.getElementById('stat-today-revenue');
+            if (!revEl) return;
+
+            revEl.innerText = `${storeSettings.currency}${todayRevenue.toFixed(2)}`;
+            document.getElementById('stat-today-orders').innerText = `${completedCount} บิล`;
+            document.getElementById('stat-avg-order').innerText = `${storeSettings.currency}${avgOrder.toFixed(2)}`;
+            document.getElementById('stat-low-stock-count').innerText = `${lowStockCount} รายการ`;
+            document.getElementById('stat-profit-estimate').innerText = `${storeSettings.currency}${grossProfit.toFixed(2)}`;
+
+            document.getElementById('pay-cash-total').innerText = `${storeSettings.currency}${cashTotal.toFixed(0)}`;
+            document.getElementById('pay-qr-total').innerText = `${storeSettings.currency}${qrTotal.toFixed(0)}`;
+
+            if (chartsInitialized) updateCharts(cashTotal, qrTotal);
+        }
+
+        function buildLast7DaysTrend() {
+            const days = [];
+            const totals = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const label = d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
+                const dayKey = d.toDateString();
+                days.push(i === 0 ? `วันนี้ (${label})` : label);
+
+                let dayTotal = 0;
+                salesHistory.forEach(s => {
+                    if (s.voided) return;
+                    if (new Date(s.timestamp).toDateString() === dayKey) dayTotal += s.total;
+                });
+                totals.push(Math.round(dayTotal));
+            }
+            return { days, totals };
+        }
+
+        function initCharts() {
+            const trend = buildLast7DaysTrend();
+
+            const ctx1 = document.getElementById('chart-sales-trend').getContext('2d');
+            salesTrendChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: trend.days,
+                    datasets: [{
+                        label: 'ยอดขาย (บาท)',
+                        data: trend.totals,
+                        backgroundColor: '#0284c7',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            const ctx2 = document.getElementById('chart-payment-breakdown').getContext('2d');
+            paymentBreakdownChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['เงินสด', 'QR โอนเงิน'],
+                    datasets: [{
+                        data: [1, 1],
+                        backgroundColor: ['#10b981', '#0284c7']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    cutout: '70%'
+                }
+            });
+
+            updateCharts(0, 0);
+        }
+
+        function updateCharts(cashTotal, qrTotal) {
+            if (salesTrendChart) {
+                const trend = buildLast7DaysTrend();
+                salesTrendChart.data.labels = trend.days;
+                salesTrendChart.data.datasets[0].data = trend.totals;
+                salesTrendChart.update();
+            }
+            if (paymentBreakdownChart) {
+                paymentBreakdownChart.data.datasets[0].data = [cashTotal || 0.0001, qrTotal || 0.0001];
+                paymentBreakdownChart.update();
+            }
+        }
+
+        // ------------------------------------------------------------
+        // Utilities
+        // ------------------------------------------------------------
+        function escapeHtml(str) {
+            if (str === undefined || str === null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function escapeAttr(str) {
+            if (str === undefined || str === null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+            if (type === "error") {
+                iconEl.className = "fa-solid fa-circle-exclamation text-rose-400 text-lg";
+            } else {
+                iconEl.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            clearTimeout(window.__toastTimeout);
+            window.__toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+
+</body>
+</html>

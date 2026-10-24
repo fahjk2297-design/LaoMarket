@@ -14,10 +14,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for Admin Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Supabase JS client (SQL database / auth) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <!-- HTML5 QRCode Reader library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./config.js"></script>
     
     <script>
         tailwind.config = {
@@ -66,7 +66,7 @@
                 <div>
                     <h1 class="font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
                         SmartPOS Pro
-                        <span class="text-xs font-normal bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">v2.6 SQL</span>
+                        <span class="text-xs font-normal bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">v2.5</span>
                     </h1>
                     <p class="text-xs text-slate-400" id="header-store-name">ร้านสะดวกซื้อ มินิมาร์ท พลัส</p>
                 </div>
@@ -97,15 +97,6 @@
                     </select>
                 </div>
 
-                <!-- Cloud (SQL) status -->
-                <div id="cloud-badge" class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1">
-                    <span id="cloud-dot" class="h-2 w-2 rounded-full bg-slate-500"></span>
-                    <span id="cloud-badge-text" class="text-slate-200 font-medium max-w-[140px] truncate">Local</span>
-                    <button id="cloud-refresh-btn" onclick="cloudRefresh()" class="hidden text-sky-300 hover:text-white px-1" title="ໂຫຼດຂໍ້ມູນຈາກ SQL ໃໝ່"><i class="fa-solid fa-rotate"></i></button>
-                    <button id="cloud-login-btn" onclick="cloudShowLogin()" class="text-sky-300 hover:text-white px-1" title="ເຂົ້າສູ່ລະບົບ Cloud"><i class="fa-solid fa-right-to-bracket"></i></button>
-                    <button id="cloud-logout-btn" onclick="cloudSignOut()" class="hidden text-rose-300 hover:text-white px-1" title="ອອກຈາກລະບົບ"><i class="fa-solid fa-right-from-bracket"></i></button>
-                </div>
-
                 <!-- Scanner Status indicator -->
                 <div class="hidden md:flex items-center space-x-2 bg-emerald-950/60 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-lg" title="Scanner Ready">
                     <span class="relative flex h-2 w-2">
@@ -121,13 +112,14 @@
                 </div>
 
                 <div class="flex items-center space-x-2 border-l border-slate-700 pl-3">
-                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-sky-400 border border-slate-600">
-                        A
+                    <div id="user-avatar" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-sky-400 border border-slate-600">A</div>
+                    <div class="hidden lg:block text-left max-w-[160px]">
+                        <div id="user-name" class="font-medium text-slate-200 text-xs truncate">-</div>
+                        <div id="user-shop" class="text-[10px] text-slate-400 truncate">LaoMarket</div>
                     </div>
-                    <div class="hidden lg:block text-left">
-                        <div class="font-medium text-slate-200 text-xs" data-i18n="cashier_name">แคชเชียร์ สมชาย</div>
-                        <div class="text-[10px] text-slate-400">Shift #012</div>
-                    </div>
+                    <button onclick="lmLogout()" title="ออกจากระบบ" class="text-slate-400 hover:text-rose-400 p-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -448,9 +440,6 @@
                                 <option value="CASH">เงินสด</option>
                                 <option value="QR">QR โอนเงิน</option>
                             </select>
-                            <button id="btn-clear-history" onclick="clearSalesHistory()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                                <i class="fa-solid fa-trash-can"></i> ล้างประวัติ
-                            </button>
                         </div>
                     </div>
 
@@ -559,35 +548,16 @@
 
                     <!-- Data Management -->
                     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
-                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2">การจัดการข้อมูลระบบ</h3>
+                        <h3 class="font-bold text-slate-800 text-base mb-4 border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-cloud text-sky-600"></i> ข้อมูลระบบ (LaoMarket Cloud)</h3>
                         <div class="flex flex-wrap gap-2 text-xs">
+                            <button onclick="lmReloadAll()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
+                                <i class="fa-solid fa-rotate"></i> โหลดข้อมูลล่าสุดจาก LaoMarket
+                            </button>
                             <button onclick="exportData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
-                                <i class="fa-solid fa-download"></i> ส่งออกข้อมูลระบบ (JSON)
-                            </button>
-                            <button onclick="document.getElementById('import-file-input').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
-                                <i class="fa-solid fa-upload"></i> นำเข้าข้อมูล (JSON)
-                            </button>
-                            <input type="file" id="import-file-input" accept="application/json" class="hidden" onchange="importData(event)">
-                            <button id="btn-reset-demo" onclick="resetDemoData()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2.5 rounded-xl font-semibold flex items-center gap-2">
-                                <i class="fa-solid fa-rotate-left"></i> รีเซ็ตเป็นข้อมูลตัวอย่าง
+                                <i class="fa-solid fa-download"></i> ส่งออกข้อมูล (JSON)
                             </button>
                         </div>
-                        <p id="data-storage-note" class="text-[11px] text-slate-400 mt-3">ข้อมูลทั้งหมดถูกบันทึกไว้ในเบราว์เซอร์นี้โดยอัตโนมัติ (Local Storage)</p>
-                    </div>
-
-                    <!-- Backup Snapshots -->
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl">
-                        <div class="flex items-center justify-between border-b pb-2 mb-4">
-                            <h3 class="font-bold text-slate-800 text-base">สำรองข้อมูล (Backup Snapshots)</h3>
-                            <button onclick="createBackupSnapshot(false)" class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                                <i class="fa-solid fa-clock-rotate-left"></i> สำรองข้อมูลตอนนี้
-                            </button>
-                        </div>
-                        <p class="text-[11px] text-slate-500 mb-1" id="last-backup-info">ยังไม่มีการสำรองข้อมูล</p>
-                        <p class="text-[11px] text-slate-400 mb-3">ระบบจะสำรองข้อมูลอัตโนมัติให้ทุกวัน (เก็บย้อนหลังสูงสุด <span id="max-backup-count">10</span> ชุด) คุณสามารถกู้คืนข้อมูลจากจุดใดก็ได้ด้านล่าง</p>
-                        <div id="backup-list" class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
-                            <!-- Dynamic backup rows -->
-                        </div>
+                        <p class="text-[11px] text-slate-400 mt-3">สินค้า สต็อก และบิลขาย POS ถูกเก็บในฐานข้อมูล Supabase เดียวกับเว็บ LaoMarket (สินค้าที่เปิดขายจะแสดงบนหน้าร้านออนไลน์ด้วย) ส่วนการตั้งค่าร้าน กระเป๋าเงิน สมาชิก และรหัสผ่านแอดมิน เก็บไว้ในตาราง shop_pos_data ของร้านนี้</p>
                     </div>
                 </div>
 
@@ -744,9 +714,9 @@
                     <!-- Quick Cash Buttons -->
                     <div class="grid grid-cols-4 gap-2">
                         <button onclick="setQuickCash('exact')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">พอดีเป๊ะ</button>
-                        <button onclick="setQuickCash(100)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">100</button>
-                        <button onclick="setQuickCash(500)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">500</button>
-                        <button onclick="setQuickCash(1000)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">1,000</button>
+                        <button onclick="setQuickCash(20000)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">20,000</button>
+                        <button onclick="setQuickCash(50000)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">50,000</button>
+                        <button onclick="setQuickCash(100000)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg text-xs font-semibold">100,000</button>
                     </div>
 
                     <!-- Change Calculation Box -->
@@ -846,57 +816,6 @@
         </div>
     </div>
 
-    <!-- CLOUD LOGIN OVERLAY (Supabase) -->
-    <div id="cloud-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[70] hidden items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden select-text">
-            <div class="p-4 bg-slate-900 text-white flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center"><i class="fa-solid fa-cloud"></i></div>
-                <div>
-                    <h3 class="font-bold text-sm">ເຂົ້າສູ່ລະບົບ LaoMarket (SQL Cloud)</h3>
-                    <p class="text-[11px] text-slate-400">ຂໍ້ມູນສິນຄ້າ ແລະ ການຂາຍຈະເກັບໃນຖານຂໍ້ມູນ Supabase</p>
-                </div>
-            </div>
-
-            <form id="cloud-login-form" onsubmit="cloudSubmitLogin(event)" class="p-5 space-y-3 text-xs">
-                <div>
-                    <label class="block font-semibold text-slate-600 mb-1">ອີເມວ</label>
-                    <input id="cloud-email" type="email" autocomplete="username" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
-                </div>
-                <div>
-                    <label class="block font-semibold text-slate-600 mb-1">ລະຫັດຜ່ານ</label>
-                    <input id="cloud-password" type="password" autocomplete="current-password" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
-                </div>
-
-                <details id="cloud-config-box" class="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                    <summary class="cursor-pointer font-semibold text-slate-600">ຕັ້ງຄ່າການເຊື່ອມຕໍ່ Supabase</summary>
-                    <div class="mt-3 space-y-2">
-                        <div>
-                            <label class="block text-slate-500 mb-1">Project URL</label>
-                            <input id="cloud-url" type="url" placeholder="https://xxxx.supabase.co" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono">
-                        </div>
-                        <div>
-                            <label class="block text-slate-500 mb-1">Publishable key (anon)</label>
-                            <input id="cloud-key" type="text" placeholder="sb_publishable_... ຫຼື eyJ..." class="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono">
-                        </div>
-                        <p class="text-[10px] text-rose-500">ໃສ່ສະເພາະ Publishable/anon key ເທົ່ານັ້ນ. ຫ້າມໃສ່ Secret ຫຼື service_role key.</p>
-                    </div>
-                </details>
-
-                <p id="cloud-error" class="hidden text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-2"></p>
-
-                <button id="cloud-login-btn-submit" type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white py-2.5 rounded-xl font-bold">ເຂົ້າສູ່ລະບົບ</button>
-                <button type="button" onclick="cloudUseLocal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2 rounded-xl font-semibold">ໃຊ້ແບບ Offline (ເກັບໃນເຄື່ອງນີ້ເທົ່ານັ້ນ)</button>
-            </form>
-
-            <div id="cloud-shop-step" class="hidden p-5 space-y-3 text-xs">
-                <label class="block font-semibold text-slate-600">ເລືອກຮ້ານ</label>
-                <select id="cloud-shop-select" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"></select>
-                <button type="button" onclick="cloudChooseShop()" class="w-full bg-sky-600 hover:bg-sky-700 text-white py-2.5 rounded-xl font-bold">ເລີ່ມໃຊ້ງານ</button>
-                <button type="button" onclick="cloudSignOut()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2 rounded-xl font-semibold">ອອກຈາກລະບົບ</button>
-            </div>
-        </div>
-    </div>
-
     <!-- MODAL 4: Admin Product Add/Edit Modal -->
     <div id="product-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
@@ -925,12 +844,12 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block font-medium text-slate-700 mb-1">ราคาขาย (บาท)</label>
-                        <input type="number" step="0.5" min="0" id="prod-price" required class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                        <label class="block font-medium text-slate-700 mb-1">ราคาขาย (กีบ)</label>
+                        <input type="number" step="1" min="1" id="prod-price" required class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
                     </div>
                     <div>
-                        <label class="block font-medium text-slate-700 mb-1">ต้นทุนต่อหน่วย (ไม่บังคับ)</label>
-                        <input type="number" step="0.5" min="0" id="prod-cost" placeholder="สำหรับคำนวณกำไร" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
+                        <label class="block font-medium text-slate-700 mb-1">ต้นทุนต่อหน่วย (กีบ, ไม่บังคับ)</label>
+                        <input type="number" step="1" min="0" id="prod-cost" placeholder="สำหรับคำนวณกำไร" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-mono">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
@@ -944,8 +863,13 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block font-medium text-slate-700 mb-1">URL รูปภาพสินค้า</label>
-                    <input type="text" id="prod-image" placeholder="https://..." class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl">
+                    <label class="block font-medium text-slate-700 mb-1">รูปภาพสินค้า (JPG / PNG / WebP)</label>
+                    <input type="hidden" id="prod-image">
+                    <input type="file" id="prod-image-file" accept="image/jpeg,image/png,image/webp" onchange="onProdImageChosen()" class="w-full p-1.5 bg-slate-50 border border-slate-300 rounded-xl">
+                    <div class="flex items-center gap-3 mt-2">
+                        <img id="prod-image-preview" alt="" class="hidden w-16 h-16 object-cover rounded-lg border">
+                        <button type="button" id="prod-image-remove" onclick="removeProdImage()" class="hidden text-rose-500 hover:underline text-[11px]">ลบรูปภาพ</button>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <input type="checkbox" id="prod-active" checked class="w-4 h-4 rounded">
@@ -956,6 +880,31 @@
                     <button type="submit" class="flex-1 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold shadow">บันทึกข้อมูล</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- LaoMarket cloud login (required before using the POS) -->
+    <div id="cloud-login" class="fixed inset-0 z-[80] bg-slate-900 flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-4">
+            <div class="text-center">
+                <div class="text-sky-400 text-3xl mb-1"><i class="fa-solid fa-cash-register"></i></div>
+                <h1 class="text-white font-bold text-lg">SmartPOS Pro</h1>
+                <p class="text-slate-400 text-[11px]">ເຂົ້າສູ່ລະບົບດ້ວຍບັນຊີ LaoMarket (ຮ້ານທີ່ໄດ້ຮັບອະນຸມັດ)</p>
+            </div>
+            <p id="cl-msg" class="text-xs text-center min-h-[1.25rem] text-slate-300"></p>
+            <form id="cl-form" onsubmit="submitCloudLogin(event)" class="space-y-3 text-xs">
+                <input type="email" id="cl-email" autocomplete="username" placeholder="ອີເມວ" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-xl focus:outline-none focus:border-sky-500">
+                <input type="password" id="cl-password" autocomplete="current-password" placeholder="ລະຫັດຜ່ານ LaoMarket" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-xl focus:outline-none focus:border-sky-500">
+                <button type="submit" id="cl-submit" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold">ເຂົ້າສູ່ລະບົບ</button>
+                <p class="text-[11px] text-slate-500 text-center">ຍັງບໍ່ມີຮ້ານ? ສະໝັກສະມາຊິກ ແລະເປີດຮ້ານທີ່ເວັບ LaoMarket ກ່ອນ ແລ້ວລໍຖ້າແອັດມິນອະນຸມັດ</p>
+                <button type="button" id="cl-reset-cfg" onclick="clearCloudConfig()" class="hidden w-full text-[11px] text-slate-500 hover:text-slate-300 underline">ປ່ຽນການເຊື່ອມຕໍ່ Supabase</button>
+            </form>
+            <div id="cl-config-panel" class="hidden space-y-3 text-xs">
+                <p class="text-slate-400 text-[11px]">ບໍ່ພົບ config.js ຂ້າງໄຟລ໌ນີ້ — ໃສ່ຄ່າເຊື່ອມຕໍ່ດຽວກັນກັບ LaoMarket (ໃຊ້ Publishable key ເທົ່ານັ້ນ ຫ້າມໃຊ້ secret / service_role)</p>
+                <input type="text" id="cl-url" placeholder="SUPABASE_URL  https://xxxx.supabase.co" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-xl font-mono focus:outline-none focus:border-sky-500">
+                <input type="text" id="cl-key" placeholder="SUPABASE_PUBLISHABLE_KEY  sb_publishable_..." class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-xl font-mono focus:outline-none focus:border-sky-500">
+                <button type="button" onclick="saveCloudConfig()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold">ບັນທຶກການເຊື່ອມຕໍ່</button>
+            </div>
         </div>
     </div>
 
@@ -995,19 +944,18 @@
             </form>
 
             <!-- Forgot password -->
-            <form id="auth-forgot-form" onsubmit="submitAdminReset(event)" class="hidden p-5 space-y-3">
-                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 space-y-1">
+            <form id="auth-forgot-form" onsubmit="event.preventDefault(); recheckAdminReset();" class="hidden p-5 space-y-3">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 space-y-1.5">
                     <p class="font-semibold"><i class="fa-solid fa-headset mr-1"></i> ລືມລະຫັດຜ່ານ?</p>
-                    <p>ກະລຸນາຕິດຕໍ່ <b>ແອັດມິນຫຼັກຂອງ LaoMarket</b> ເພື່ອຂໍລະຫັດປົດລັອກ ແລ້ວນຳມາປ່ຽນລະຫັດຜ່ານໃໝ່ດ້ານລຸ່ມ</p>
+                    <p>ກະລຸນາຕິດຕໍ່ <b>ແອັດມິນຫຼັກຂອງ LaoMarket</b> ເພື່ອຂໍປ່ຽນລະຫັດຜ່ານໃໝ່ ແລະແຈ້ງລະຫັດຮ້ານດ້ານລຸ່ມໃຫ້ແອັດມິນ</p>
                     <div id="auth-support-contact" class="font-mono"></div>
+                    <div>ລະຫັດຮ້ານ: <span id="auth-shop-id" class="font-mono break-all select-text"></span></div>
                 </div>
-                <input type="text" id="auth-reset-code" autocomplete="off" placeholder="ລະຫັດປົດລັອກຈາກ LaoMarket" class="w-full p-3 bg-slate-50 border-2 border-sky-500 rounded-xl focus:outline-none text-xs font-mono">
-                <input type="password" id="auth-reset-pw" autocomplete="new-password" placeholder="ລະຫັດຜ່ານໃໝ່ (ຢ່າງໜ້ອຍ 6 ຕົວອັກສອນ)" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none text-xs">
-                <input type="password" id="auth-reset-pw2" autocomplete="new-password" placeholder="ຢືນຢັນລະຫັດຜ່ານໃໝ່" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none text-xs">
+                <p class="text-[11px] text-slate-500 text-center">ເມື່ອແອັດມິນ LaoMarket ຣີເຊັດໃຫ້ແລ້ວ ກົດປຸ່ມດ້ານລຸ່ມ ເພື່ອຕັ້ງລະຫັດຜ່ານໃໝ່</p>
                 <p id="auth-forgot-error" class="hidden text-rose-500 text-xs text-center font-medium"></p>
                 <div class="flex gap-2 pt-1">
                     <button type="button" onclick="showAuthMode('login')" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs">ກັບຄືນ</button>
-                    <button type="submit" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold text-xs shadow">ປ່ຽນລະຫັດຜ່ານ</button>
+                    <button type="submit" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold text-xs shadow">ກວດສອບການຣີເຊັດ</button>
                 </div>
             </form>
         </div>
@@ -1182,17 +1130,6 @@
 
         const DEFAULT_CATEGORIES = ['เครื่องดื่ม', 'ขนมและของทานเล่น', 'อาหารและเบเกอรี่', 'ของใช้ทั่วไป'];
 
-        const DEFAULT_PRODUCTS = [
-            { id: 1, name: 'กาแฟเย็น อาราบิก้า 22 oz', category: 'เครื่องดื่ม', price: 45.00, cost: 22.00, stock: 35, lowStock: null, barcode: '885000000001', image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=300&q=80', active: true },
-            { id: 2, name: 'ชาไทยเย็น หวานน้อย 22 oz', category: 'เครื่องดื่ม', price: 40.00, cost: 18.00, stock: 20, lowStock: null, barcode: '885000000002', image: 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=300&q=80', active: true },
-            { id: 3, name: 'น้ำดื่มสิงห์ 600 ml', category: 'เครื่องดื่ม', price: 10.00, cost: 5.00, stock: 120, lowStock: null, barcode: '885000000003', image: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=300&q=80', active: true },
-            { id: 4, name: 'ขนมปังโฮลวีท สังขยา', category: 'อาหารและเบเกอรี่', price: 25.00, cost: 14.00, stock: 4, lowStock: null, barcode: '885000000004', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=300&q=80', active: true },
-            { id: 5, name: 'มันฝรั่งเลย์ รสออริจินัล 50g', category: 'ขนมและของทานเล่น', price: 20.00, cost: 12.00, stock: 18, lowStock: null, barcode: '885000000005', image: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=300&q=80', active: true },
-            { id: 6, name: 'ข้าวผัดกระเพราไข่ดาว (กล่อง)', category: 'อาหารและเบเกอรี่', price: 55.00, cost: 30.00, stock: 8, lowStock: null, barcode: '885000000006', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=300&q=80', active: true },
-            { id: 7, name: 'กระดาษทิชชู่ มินิแพ็ค', category: 'ของใช้ทั่วไป', price: 15.00, cost: 8.00, stock: 45, lowStock: null, barcode: '885000000007', image: 'https://images.unsplash.com/photo-1584556812952-905ffd0c611a?auto=format&fit=crop&w=300&q=80', active: true },
-            { id: 8, name: 'ช็อกโกแลตบาร์ 45g', category: 'ขนมและของทานเล่น', price: 30.00, cost: 16.00, stock: 2, lowStock: null, barcode: '885000000008', image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=300&q=80', active: true }
-        ];
-
         const DEFAULT_SETTINGS = {
             name: "ร้านสะดวกซื้อ มินิมาร์ท พลัส",
             phone: "081-234-5678",
@@ -1200,7 +1137,7 @@
             receiptFooter: "สินค้าซื้อแล้วไม่รับเปลี่ยนคืนภายใน 7 วัน",
             vatRate: 7,
             lowStockThreshold: 5,
-            currency: "฿",
+            currency: "₭",
             adminPasswordHash: "",
             adminPasswordSalt: ""
         };
@@ -1244,709 +1181,411 @@
         let isAdminUnlocked = false;
 
         // ------------------------------------------------------------
-        // Cloud layer (Supabase / PostgreSQL)
-        // Products, stock, sales (receipts), void and shop settings are stored in SQL.
-        // Run schema.sql and then schema_pos_v12.sql in the Supabase SQL Editor first.
+        // LaoMarket cloud storage (Supabase) — same database as the LaoMarket web
+        //   products / product_costs / pos_sales / pos_sale_items  -> shared tables
+        //   store settings, wallets, members, categories, admin password hash -> shop_pos_data
         // ------------------------------------------------------------
-        // Fill these once, or type them in the login window (they are then remembered in this browser).
-        // Use ONLY the Publishable (anon) key here - never a Secret / service_role key.
-        const CLOUD_DEFAULTS = { url: '', key: '' };
-        const CLOUD_CFG_KEY = 'smartpos_cloud_cfg_v1';
-        const CLOUD_SHOP_KEY = 'smartpos_cloud_shop_v1';
-        const CLOUD_SALES_LIMIT = 1000;
-        const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80';
-        const CLOUD_SALE_COLS = 'id,sale_number,subtotal_lak,discount_lak,total_lak,vat_lak,payment_method,paid_lak,change_lak,status,created_at,pos_sale_items(product_id,product_name,quantity,unit_price_lak,unit_cost_lak)';
-        const CLOUD = { client: null, active: false, user: null, shop: null, shops: [], busy: false, metaTimer: null, lastMeta: '' };
+        const LM_CFG_KEY = 'smartpos_lm_config';
+        const SALES_HISTORY_DAYS = 90;
+        const AUTO_REFRESH_MS = 60000;
 
-        function cloudEl(id) { return document.getElementById(id); }
+        let sb = null;
+        let lmUser = null;
+        let lmShop = null;
+        let cloudReady = false;
+        let productMeta = {};
+        let lastSalesLoad = 0;
+        let saveTimer = null;
+        let paying = false;
+        let prodRemoveImage = false;
+        let refreshTimer = null;
+        let cfgFromLocal = false;
 
-        function cloudGetCfg() {
-            try {
-                const s = JSON.parse(localStorage.getItem(CLOUD_CFG_KEY) || 'null');
-                if (s && s.url && s.key) return s;
-            } catch (e) { /* ignore */ }
-            return { url: CLOUD_DEFAULTS.url, key: CLOUD_DEFAULTS.key };
+        window.lmGenEan13 = function() { let d = '2'; for (let i = 0; i < 11; i++) d += Math.floor(Math.random() * 10); let t = 0; for (let i = 0; i < 12; i++) t += Number(d[i]) * (i % 2 ? 3 : 1); return d + ((10 - t % 10) % 10); };
+        const clone = (o) => JSON.parse(JSON.stringify(o));
+        const money = (n) => `${storeSettings.currency || '₭'}${Math.round(Number(n) || 0).toLocaleString('en-US')}`;
+
+        function lmErr(m) {
+            m = String(m || '');
+            if (/insufficient_stock/.test(m)) return 'สต็อกไม่พอ: ' + (m.split(': ')[1] || '');
+            if (/product_not_found/.test(m)) return 'ไม่พบสินค้าในร้าน';
+            if (/insufficient_payment/.test(m)) return 'เงินที่รับน้อยกว่ายอดชำระ';
+            if (/shop_not_approved/.test(m)) return 'ร้านยังไม่ได้รับการอนุมัติ';
+            if (/bad_discount/.test(m)) return 'ส่วนลดไม่ถูกต้อง';
+            if (/bad_quantity/.test(m)) return 'จำนวนสินค้าไม่ถูกต้อง';
+            if (/bad_numbers/.test(m)) return 'ราคา/ต้นทุน/สต็อกไม่ถูกต้อง';
+            if (/bad_name/.test(m)) return 'ชื่อสินค้าไม่ถูกต้อง';
+            if (/bad_image/.test(m)) return 'รูปภาพไม่ถูกต้อง';
+            if (/not_authenticated|JWT/.test(m)) return 'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่';
+            if (/sale_not_found/.test(m)) return 'ไม่พบบิลนี้';
+            if (/already_voided/.test(m)) return 'บิลนี้ถูกยกเลิกไปแล้ว';
+            return m;
         }
 
-        function cloudIsSecretKey(key) {
-            if (/^sb_secret_/i.test(key)) return true;
+        // ---------- connection config (config.js shared with LaoMarket, or entered here) ----------
+        function lmConfig() {
+            const c = window.LAOMARKET_CONFIG || {};
+            const bad = (u, k) => !u || !k || /YOUR_PROJECT_REF|YOUR_KEY/.test(u + k);
+            if (!bad(c.SUPABASE_URL, c.SUPABASE_PUBLISHABLE_KEY)) {
+                return { url: c.SUPABASE_URL, key: c.SUPABASE_PUBLISHABLE_KEY, local: false };
+            }
             try {
-                const part = key.split('.')[1];
-                if (part) {
-                    const json = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
-                    if (json && json.role === 'service_role') return true;
+                const l = JSON.parse(localStorage.getItem(LM_CFG_KEY) || 'null');
+                if (l && !bad(l.url, l.key)) return { url: l.url, key: l.key, local: true };
+            } catch (e) { /* ignore */ }
+            return null;
+        }
+
+        function isSecretKey(key) {
+            if (/^sb_secret_/.test(key)) return true;
+            try {
+                const parts = key.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                    if (payload && payload.role === 'service_role') return true;
                 }
             } catch (e) { /* not a JWT */ }
             return false;
         }
 
-        // Returns '' when the client is ready, otherwise a message explaining what is missing.
-        function cloudInitClient() {
-            const cfg = cloudGetCfg();
-            if (!window.supabase || !window.supabase.createClient) return 'ໂຫຼດ Supabase library ບໍ່ໄດ້ (ກວດສອບອິນເຕີເນັດ)';
-            if (!cfg.url || !cfg.key) return 'ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ Project URL ແລະ Publishable key';
-            if (cloudIsSecretKey(cfg.key)) return 'ນີ້ແມ່ນ Secret/service_role key - ຫ້າມໃຊ້ໃນເບຣາເຊີ. ໃຊ້ Publishable key ແທນ';
-            if (!/^https:\/\//i.test(cfg.url)) return 'Project URL ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍ https://';
-            CLOUD.client = window.supabase.createClient(cfg.url.replace(/\/+$/, ''), cfg.key, {
-                auth: { persistSession: true, autoRefreshToken: true }
-            });
-            return '';
+        function saveCloudConfig() {
+            const url = document.getElementById('cl-url').value.trim().replace(/\/+$/, '');
+            const key = document.getElementById('cl-key').value.trim();
+            if (!/^https:\/\/.+/.test(url) || !key) { setLoginMsg('กรุณาใส่ SUPABASE_URL (https://...) และ Publishable key', true); return; }
+            if (isSecretKey(key)) { setLoginMsg('ห้ามใช้ secret / service_role key ในเบราว์เซอร์ — ใช้ Publishable key (sb_publishable_…) เท่านั้น', true); return; }
+            localStorage.setItem(LM_CFG_KEY, JSON.stringify({ url, key }));
+            location.reload();
         }
 
-        // ---------- login overlay / badge ----------
-        function cloudSetError(msg) {
-            const el = cloudEl('cloud-error');
-            if (!msg) { el.classList.add('hidden'); el.textContent = ''; return; }
-            el.textContent = msg;
-            el.classList.remove('hidden');
+        function showCfgPanel(show) {
+            document.getElementById('cl-config-panel').classList.toggle('hidden', !show);
+            document.getElementById('cl-form').classList.toggle('hidden', !!show);
         }
 
-        function cloudShowLogin(msg) {
-            const cfg = cloudGetCfg();
-            cloudEl('cloud-url').value = cfg.url || '';
-            cloudEl('cloud-key').value = cfg.key || '';
-            cloudEl('cloud-config-box').open = !(cfg.url && cfg.key);
-            cloudEl('cloud-login-form').classList.remove('hidden');
-            cloudEl('cloud-shop-step').classList.add('hidden');
-            cloudSetError(msg || '');
-            const ov = cloudEl('cloud-overlay');
-            ov.classList.remove('hidden');
-            ov.classList.add('flex');
-            setTimeout(() => { const e = cloudEl('cloud-email'); if (e) e.focus(); }, 50);
+        function clearCloudConfig() {
+            localStorage.removeItem(LM_CFG_KEY);
+            location.reload();
         }
 
-        function cloudHideOverlay() {
-            const ov = cloudEl('cloud-overlay');
-            ov.classList.add('hidden');
-            ov.classList.remove('flex');
+        // ---------- login overlay ----------
+        function setLoginMsg(text, bad) {
+            const el = document.getElementById('cl-msg');
+            el.innerText = text || '';
+            el.className = 'text-xs text-center min-h-[1.25rem] ' + (bad ? 'text-rose-400' : 'text-slate-300');
         }
-
-        function cloudUpdateBadge() {
-            cloudEl('cloud-badge-text').textContent = CLOUD.active ? ('SQL · ' + CLOUD.shop.name) : 'Local';
-            cloudEl('cloud-dot').className = 'h-2 w-2 rounded-full ' + (CLOUD.active ? 'bg-emerald-400' : 'bg-slate-500');
-            cloudEl('cloud-refresh-btn').classList.toggle('hidden', !CLOUD.active);
-            cloudEl('cloud-logout-btn').classList.toggle('hidden', !CLOUD.active);
-            cloudEl('cloud-login-btn').classList.toggle('hidden', CLOUD.active);
-        }
-
-        function cloudApplyUi() {
-            cloudUpdateBadge();
-            const clr = cloudEl('btn-clear-history'); if (clr) clr.classList.add('hidden');
-            const rst = cloudEl('btn-reset-demo'); if (rst) rst.classList.add('hidden');
-            const note = cloudEl('data-storage-note');
-            if (note) note.textContent = 'ຂໍ້ມູນສິນຄ້າ ການຂາຍ ແລະ ການຕັ້ງຄ່າ ຖືກເກັບໃນຖານຂໍ້ມູນ Supabase (SQL) - ບໍ່ແມ່ນໃນເບຣາເຊີນີ້';
-            ['prod-price', 'prod-cost'].forEach(id => { const el = cloudEl(id); if (el) el.step = '1'; }); // SQL stores whole amounts
-        }
-
-        function cloudUseLocal() {
-            CLOUD.active = false;
-            cloudHideOverlay();
-            cloudUpdateBadge();
-        }
-
-        // ---------- error messages ----------
-        function cloudErrMsg(err) {
-            const m = String((err && err.message) || err || '');
-            const code = err && err.code;
-            if (code === '23505' || /duplicate key/i.test(m)) return 'ມີສິນຄ້າອື່ນໃຊ້ບາໂຄ້ດ/SKU ນີ້ຢູ່ແລ້ວ';
-            if (/Invalid login credentials/i.test(m)) return 'ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ';
-            if (/Email not confirmed/i.test(m)) return 'ອີເມວນີ້ຍັງບໍ່ໄດ້ຢືນຢັນ - ກົດລິ້ງໃນອີເມວກ່ອນ';
-            if (/account_suspended/.test(m)) return 'ບັນຊີນີ້ຖືກລະງັບ';
-            if (/no_approved_shop/.test(m)) return 'ບັນຊີນີ້ຍັງບໍ່ມີຮ້ານທີ່ໄດ້ຮັບອະນຸມັດ (ຕ້ອງໃຫ້ແອັດມິນ LaoMarket ອະນຸມັດຮ້ານກ່ອນ)';
-            if (/insufficient_stock/.test(m)) {
-                const nm = m.split(':').slice(1).join(':').trim();
-                return nm ? `ສິນຄ້າ "${nm}" ມີສະຕັອກບໍ່ພຽງພໍ` : 'ສະຕັອກບໍ່ພຽງພໍ';
-            }
-            const known = {
-                insufficient_payment: 'ຈຳນວນເງິນທີ່ຮັບມາບໍ່ຄົບຕາມຍອດ',
-                bad_discount: 'ສ່ວນຫຼຸດບໍ່ຖືກຕ້ອງ',
-                bad_quantity: 'ຈຳນວນສິນຄ້າບໍ່ຖືກຕ້ອງ',
-                product_not_found: 'ບໍ່ພົບສິນຄ້ານີ້ໃນຖານຂໍ້ມູນ (ລອງກົດໂຫຼດຂໍ້ມູນໃໝ່)',
-                shop_not_approved: 'ຮ້ານນີ້ຍັງບໍ່ໄດ້ຮັບອະນຸມັດ',
-                bad_image: 'ຮູບສິນຄ້າຕ້ອງເປັນລິ້ງ https:// (ບໍ່ເກີນ 500 ຕົວອັກສອນ)',
-                bad_numbers: 'ຕົວເລກລາຄາ/ຕົ້ນທຶນ/ສະຕັອກບໍ່ຖືກຕ້ອງ',
-                bad_name: 'ຊື່ສິນຄ້າບໍ່ຖືກຕ້ອງ',
-                empty_cart: 'ກະຕ່າສິນຄ້າວ່າງ',
-                already_voided: 'ບິນນີ້ຖືກຍົກເລີກແລ້ວ',
-                sale_not_found: 'ບໍ່ພົບບິນນີ້',
-                bad_payment: 'ວິທີຊຳລະບໍ່ຖືກຕ້ອງ'
-            };
-            for (const k in known) if (m.indexOf(k) !== -1) return known[k];
-            if (/not_authenticated|JWT|jwt/.test(m)) return 'ໝົດເວລາເຂົ້າສູ່ລະບົບ - ກະລຸນາເຂົ້າສູ່ລະບົບໃໝ່';
-            if (/does not exist|Could not find|schema cache/i.test(m)) return 'ຖານຂໍ້ມູນຍັງບໍ່ໄດ້ອັບເດດ - ກະລຸນາ run schema_pos_v12.sql ໃນ Supabase SQL Editor ກ່ອນ';
-            if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'ເຊື່ອມຕໍ່ອິນເຕີເນັດບໍ່ໄດ້';
-            return m || 'ເກີດຂໍ້ຜິດພາດ';
-        }
-
-        function cloudHandleError(err) {
-            console.error(err);
-            const msg = cloudErrMsg(err);
-            const m = String((err && err.message) || err || '');
-            if (/not_authenticated|JWT|jwt/.test(m)) { cloudShowLogin(msg); return; }
-            showToast(msg, 'error');
-        }
-
-        // ---------- sign in / out ----------
-        async function cloudSubmitLogin(e) {
-            e.preventDefault();
-            cloudSetError('');
-            const url = cloudEl('cloud-url').value.trim();
-            const key = cloudEl('cloud-key').value.trim();
-            if (key && cloudIsSecretKey(key)) {
-                cloudSetError('ນີ້ແມ່ນ Secret/service_role key - ຫ້າມໃຊ້ໃນເບຣາເຊີ. ໃຊ້ Publishable key ແທນ');
-                cloudEl('cloud-config-box').open = true;
-                return;
-            }
-            if (url && key) localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify({ url, key }));
-            const bad = cloudInitClient();
-            if (bad) { cloudSetError(bad); cloudEl('cloud-config-box').open = true; return; }
-
-            const btn = cloudEl('cloud-login-btn-submit');
-            btn.disabled = true;
-            btn.textContent = 'ກຳລັງເຂົ້າສູ່ລະບົບ...';
-            try {
-                const { data, error } = await CLOUD.client.auth.signInWithPassword({
-                    email: cloudEl('cloud-email').value.trim(),
-                    password: cloudEl('cloud-password').value
-                });
-                if (error) throw error;
-                cloudEl('cloud-password').value = '';
-                await cloudEnter(data.user, false);
-            } catch (err) {
-                console.error(err);
-                cloudSetError(cloudErrMsg(err));
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'ເຂົ້າສູ່ລະບົບ';
-            }
-        }
-
-        async function cloudSignOut() {
-            try {
-                if (CLOUD.metaTimer) { clearTimeout(CLOUD.metaTimer); await cloudFlushMeta(); }
-                if (CLOUD.client) await CLOUD.client.auth.signOut();
-            } catch (e) { console.error(e); }
-            location.reload();   // back to local mode with the browser's own data untouched
+        function showLoginOverlay() { document.getElementById('cloud-login').classList.remove('hidden'); }
+        function hideLoginOverlay() { document.getElementById('cloud-login').classList.add('hidden'); }
+        function setLoginBusy(b) {
+            const btn = document.getElementById('cl-submit');
+            btn.disabled = b;
+            btn.classList.toggle('opacity-60', b);
         }
 
         async function cloudBoot() {
-            document.addEventListener('visibilitychange', function() {
-                if (document.visibilityState === 'hidden' && CLOUD.active && CLOUD.metaTimer) {
-                    clearTimeout(CLOUD.metaTimer);
-                    cloudFlushMeta();
+            showLoginOverlay();
+            const cfg = lmConfig();
+            if (!cfg || !window.supabase) {
+                if (!window.supabase) {
+                    setLoginMsg('โหลดไลบรารี Supabase ไม่ได้ — ตรวจสอบอินเทอร์เน็ต แล้วรีเฟรชหน้านี้', true);
+                    return;
                 }
-            });
-            cloudUpdateBadge();
-            const bad = cloudInitClient();
-            if (bad) { cloudShowLogin(window.supabase ? '' : bad); return; }
-            try {
-                const { data } = await CLOUD.client.auth.getSession();
-                if (data && data.session) { await cloudEnter(data.session.user, true); return; }
-            } catch (err) {
-                console.error(err);
-                cloudShowLogin(cloudErrMsg(err));
+                setLoginMsg('ยังไม่ได้ตั้งค่า config.js — ใส่ค่าเชื่อมต่อ LaoMarket ด้านล่าง', true);
+                showCfgPanel(true);
                 return;
             }
-            cloudShowLogin();
-        }
-
-        async function cloudEnter(user, silent) {
-            CLOUD.user = user;
-            try {
-                const pr = await CLOUD.client.from('profiles').select('is_suspended').eq('id', user.id).maybeSingle();
-                if (pr.error) throw pr.error;
-                if (pr.data && pr.data.is_suspended) throw new Error('account_suspended');
-
-                const sh = await CLOUD.client.from('shops').select('id,name').eq('owner_id', user.id).eq('status', 'approved').order('created_at', { ascending: true });
-                if (sh.error) throw sh.error;
-                CLOUD.shops = sh.data || [];
-                if (!CLOUD.shops.length) throw new Error('no_approved_shop');
-            } catch (err) {
-                try { await CLOUD.client.auth.signOut(); } catch (e) { /* ignore */ }
-                if (silent) { cloudShowLogin(cloudErrMsg(err)); return; }
-                throw err;
+            cfgFromLocal = cfg.local;
+            document.getElementById('cl-reset-cfg').classList.toggle('hidden', !cfgFromLocal);
+            sb = window.supabase.createClient(cfg.url, cfg.key, {
+                auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
+            });
+            sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT' && cloudReady) onSignedOut(); });
+            const { data } = await sb.auth.getSession();
+            if (data && data.session) {
+                setLoginMsg('กำลังโหลดข้อมูลร้าน...');
+                await afterLogin(data.session.user);
+            } else {
+                setLoginMsg('');
             }
-
-            const remembered = CLOUD.shops.find(s => s.id === localStorage.getItem(CLOUD_SHOP_KEY + ':' + user.id));
-            if (CLOUD.shops.length === 1) { await cloudStartShop(CLOUD.shops[0]); return; }
-            if (remembered && silent) { await cloudStartShop(remembered); return; }
-
-            cloudEl('cloud-shop-select').innerHTML = CLOUD.shops.map(s => `<option value="${escapeAttr(s.id)}">${escapeHtml(s.name)}</option>`).join('');
-            if (remembered) cloudEl('cloud-shop-select').value = remembered.id;
-            cloudEl('cloud-login-form').classList.add('hidden');
-            cloudEl('cloud-shop-step').classList.remove('hidden');
-            const ov = cloudEl('cloud-overlay');
-            ov.classList.remove('hidden');
-            ov.classList.add('flex');
         }
 
-        async function cloudChooseShop() {
-            const shop = CLOUD.shops.find(s => s.id === cloudEl('cloud-shop-select').value);
-            if (!shop) return;
-            try { await cloudStartShop(shop); } catch (err) { cloudHandleError(err); }
-        }
-
-        async function cloudStartShop(shop) {
-            CLOUD.shop = shop;
-            try { localStorage.setItem(CLOUD_SHOP_KEY + ':' + CLOUD.user.id, shop.id); } catch (e) { /* ignore */ }
-            let hadMeta = true;
-            try {
-                hadMeta = await cloudLoadAll();
-            } catch (err) {
-                CLOUD.shop = null;
-                cloudShowLogin(cloudErrMsg(err));
-                throw err;
+        async function submitCloudLogin(e) {
+            e.preventDefault();
+            if (!sb) return;
+            const email = document.getElementById('cl-email').value.trim();
+            const password = document.getElementById('cl-password').value;
+            if (!email || !password) { setLoginMsg('กรุณาใส่อีเมลและรหัสผ่าน', true); return; }
+            setLoginBusy(true);
+            setLoginMsg('กำลังเข้าสู่ระบบ...');
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) {
+                let m = error.message;
+                if (/invalid login/i.test(m)) m = 'อีเมล หรือ รหัสผ่านไม่ถูกต้อง';
+                else if (/not confirmed/i.test(m)) m = 'ยังไม่ได้ยืนยันอีเมล — กดลิงก์ในกล่องจดหมายก่อน';
+                setLoginMsg(m, true);
+                setLoginBusy(false);
+                return;
             }
-            CLOUD.active = true;
-            activeCategory = 'all';
-            clearCart();
-            cloudHideOverlay();
-            cloudApplyUi();
-            fullRefresh();
-            if (!hadMeta) cloudQueueMetaSave(true);
-            showToast('ເຊື່ອມຕໍ່ SQL ສຳເລັດ: ' + shop.name);
+            document.getElementById('cl-password').value = '';
+            await afterLogin(data.user);
+            setLoginBusy(false);
         }
 
-        // ---------- fetch ----------
-        async function cloudFetchProducts() {
-            const { data, error } = await CLOUD.client
-                .from('products')
-                .select('id,name,barcode,category,price_lak,stock,low_stock,image_url,status,product_costs(cost_lak)')
-                .eq('shop_id', CLOUD.shop.id)
-                .order('name', { ascending: true })
-                .range(0, 4999);
+        async function afterLogin(user) {
+            try {
+                const { data, error } = await sb.from('shops').select('id,name,phone,address,status').eq('owner_id', user.id);
+                if (error) throw error;
+                const shop = (data || []).find(s => s.status === 'approved');
+                if (!shop) {
+                    const any = (data || [])[0];
+                    let m = 'บัญชีนี้ยังไม่มีร้านที่ได้รับอนุมัติ — สมัครเปิดร้านที่เว็บ LaoMarket แล้วรอแอดมินอนุมัติก่อน';
+                    if (any && any.status === 'pending') m = 'ร้าน "' + any.name + '" กำลังรอแอดมินอนุมัติ';
+                    else if (any) m = 'ร้าน "' + any.name + '" ถูกระงับหรือถูกปฏิเสธ — ติดต่อแอดมิน LaoMarket';
+                    await sb.auth.signOut();
+                    setLoginMsg(m, true);
+                    return;
+                }
+                lmUser = user;
+                lmShop = shop;
+                await loadCloudSettings();
+                await Promise.all([loadCloudProducts(), loadCloudSales()]);
+                cloudReady = true;
+                await fillUserHeader();
+                hideLoginOverlay();
+                fullRefresh();
+                changeLanguage(currentLang || 'th');
+                startAutoRefresh();
+            } catch (err) {
+                console.error(err);
+                let m = err && err.message ? err.message : String(err);
+                if (/shop_pos_data/.test(m) || (err && err.code === '42P01')) {
+                    m = 'ฐานข้อมูลยังไม่มีตาราง shop_pos_data — รัน schema_v12_pos.sql ใน Supabase SQL Editor ก่อน';
+                }
+                try { await sb.auth.signOut(); } catch (e2) { /* ignore */ }
+                setLoginMsg('โหลดข้อมูลไม่สำเร็จ: ' + m, true);
+            }
+        }
+
+        async function fillUserHeader() {
+            let name = lmUser.user_metadata && lmUser.user_metadata.display_name;
+            if (!name) {
+                const r = await sb.from('profiles').select('display_name').eq('id', lmUser.id).maybeSingle();
+                name = (r.data && r.data.display_name) || lmUser.email || '';
+            }
+            document.getElementById('user-name').innerText = name;
+            document.getElementById('user-shop').innerText = lmShop.name;
+            document.getElementById('user-avatar').innerText = (name || 'A').trim().charAt(0).toUpperCase();
+        }
+
+        async function lmLogout() {
+            if (!confirm('ออกจากระบบ SmartPOS Pro ใช่หรือไม่?')) return;
+            await sb.auth.signOut();
+            onSignedOut();
+        }
+
+        function onSignedOut() {
+            cloudReady = false;
+            clearInterval(refreshTimer);
+            clearTimeout(saveTimer);
+            products = []; salesHistory = []; categories = []; members = []; productMeta = {};
+            currentCart = []; currentDiscount = 0; isAdminUnlocked = false;
+            lmUser = null; lmShop = null;
+            storeSettings = Object.assign({}, DEFAULT_SETTINGS);
+            try { activateTab('pos'); } catch (e) { /* ignore */ }
+            renderProducts(); renderCart();
+            document.getElementById('pin-modal').classList.add('hidden');
+            showLoginOverlay();
+            setLoginMsg('ออกจากระบบแล้ว');
+            setLoginBusy(false);
+        }
+
+        // ---------- load ----------
+        async function fetchAll(build) {
+            let all = [], from = 0;
+            for (;;) {
+                const { data, error } = await build().range(from, from + 999);
+                if (error) throw error;
+                all = all.concat(data || []);
+                if (!data || data.length < 1000) break;
+                from += 1000;
+            }
+            return all;
+        }
+
+        async function loadCloudSettings() {
+            const { data, error } = await sb.from('shop_pos_data').select('key,value').eq('shop_id', lmShop.id);
             if (error) throw error;
-            const used = new Set();
-            return (data || []).map(r => {
-                const pc = Array.isArray(r.product_costs) ? r.product_costs[0] : r.product_costs;
-                // The POS UI uses numeric ids in its inline handlers: derive a stable number from the uuid.
-                let n = parseInt(r.id.replace(/-/g, '').slice(0, 12), 16);
-                while (used.has(n)) n++;
-                used.add(n);
+            const m = {};
+            (data || []).forEach(r => { m[r.key] = r.value; });
+            storeSettings = Object.assign({}, DEFAULT_SETTINGS, { name: lmShop.name, phone: lmShop.phone || '' }, m.settings || {});
+            const sec = m.admin_security || {};
+            storeSettings.adminPasswordHash = sec.hash || '';
+            storeSettings.adminPasswordSalt = sec.salt || '';
+            currencies = (Array.isArray(m.currencies) && m.currencies.length) ? m.currencies : clone(DEFAULT_CURRENCIES);
+            members = Array.isArray(m.members) ? m.members : [];
+            categories = Array.isArray(m.categories) ? m.categories : [];
+            productMeta = (m.product_meta && typeof m.product_meta === 'object') ? m.product_meta : {};
+        }
+
+        async function lmSyncAdminSecurity() {
+            if (!sb || !lmShop) return;
+            const r = await sb.from('shop_pos_data').select('value').eq('shop_id', lmShop.id).eq('key', 'admin_security').maybeSingle();
+            if (r.error) return;
+            const v = r.data && r.data.value;
+            storeSettings.adminPasswordHash = (v && v.hash) || '';
+            storeSettings.adminPasswordSalt = (v && v.salt) || '';
+        }
+
+        async function loadCloudProducts() {
+            const rows = await fetchAll(() => sb.from('products')
+                .select('id,name,category,price_lak,stock,status,image_url,barcode')
+                .eq('shop_id', lmShop.id).order('name').order('id'));
+            const c = await fetchAll(() => sb.from('product_costs').select('product_id,cost_lak').eq('shop_id', lmShop.id).order('product_id'));
+            const costs = {};
+            c.forEach(x => { costs[x.product_id] = Number(x.cost_lak); });
+            products = rows.map(x => {
+                const meta = productMeta[x.id];
                 return {
-                    id: n,
-                    uuid: r.id,
-                    name: r.name,
-                    barcode: r.barcode || '',
-                    category: r.category || 'Other',
-                    price: Number(r.price_lak) || 0,
-                    cost: pc ? (Number(pc.cost_lak) || 0) : 0,
-                    stock: r.stock || 0,
-                    lowStock: (r.low_stock === null || r.low_stock === undefined) ? null : r.low_stock,
-                    image: r.image_url || DEFAULT_PRODUCT_IMAGE,
-                    active: (r.status === 'active' || r.status === 'out_of_stock')
+                    id: x.id,
+                    name: x.name,
+                    barcode: x.barcode || '',
+                    category: x.category || 'Other',
+                    price: Number(x.price_lak),
+                    cost: costs[x.id] || 0,
+                    stock: x.stock,
+                    lowStock: (meta && meta.lowStock !== undefined && meta.lowStock !== null) ? meta.lowStock : null,
+                    image: x.image_url || '',
+                    active: (x.status === 'active' || x.status === 'out_of_stock'),
+                    status: x.status
                 };
             });
+            let added = false;
+            products.forEach(p => { if (!categories.includes(p.category)) { categories.push(p.category); added = true; } });
+            if (!categories.length) { categories.push('Other'); added = true; }
+            if (added && cloudReady) saveState();
         }
 
-        function cloudMapSale(s, idByUuid) {
-            const created = new Date(s.created_at);
-            const total = Number(s.total_lak) || 0;
-            const vat = Number(s.vat_lak) || 0;
+        function mapSale(s) {
+            const total = Number(s.total_lak);
+            const vr = getVatRate();
+            const vat = total - total / (1 + vr);
+            const dt = new Date(s.created_at);
             return {
                 id: s.sale_number,
-                uuid: s.id,
-                date: created.toLocaleString('th-TH'),
-                timestamp: created.getTime(),
+                saleId: s.id,
+                date: dt.toLocaleString('th-TH'),
+                timestamp: dt.getTime(),
                 items: (s.pos_sale_items || []).map(i => ({
-                    id: idByUuid.get(i.product_id) || 0,
+                    id: i.product_id,
                     name: i.product_name,
-                    price: Number(i.unit_price_lak) || 0,
+                    price: Number(i.unit_price_lak),
                     cost: (i.unit_cost_lak === null || i.unit_cost_lak === undefined) ? null : Number(i.unit_cost_lak),
                     qty: i.quantity
                 })),
                 subtotal: total - vat,
                 vat: vat,
-                discount: Number(s.discount_lak) || 0,
+                discount: Number(s.discount_lak),
                 total: total,
-                paid: Number(s.paid_lak) || 0,
-                change: Number(s.change_lak) || 0,
+                paid: Number(s.paid_lak),
+                change: Number(s.change_lak),
                 paymentMode: s.payment_method === 'cash' ? 'CASH' : 'QR',
                 voided: s.status === 'voided'
             };
         }
 
-        async function cloudFetchSales(prods) {
-            const idByUuid = new Map(prods.map(p => [p.uuid, p.id]));
-            const { data, error } = await CLOUD.client
-                .from('pos_sales')
-                .select(CLOUD_SALE_COLS)
-                .eq('shop_id', CLOUD.shop.id)
-                .order('created_at', { ascending: false })
-                .range(0, CLOUD_SALES_LIMIT - 1);
-            if (error) throw error;
-            return (data || []).map(s => cloudMapSale(s, idByUuid));
+        async function loadCloudSales() {
+            const since = new Date(Date.now() - SALES_HISTORY_DAYS * 86400000).toISOString();
+            const rows = await fetchAll(() => sb.from('pos_sales')
+                .select('id,sale_number,subtotal_lak,discount_lak,total_lak,paid_lak,change_lak,payment_method,status,created_at,pos_sale_items(product_id,product_name,quantity,unit_price_lak,unit_cost_lak)')
+                .eq('shop_id', lmShop.id).gte('created_at', since)
+                .order('created_at', { ascending: false }).order('id'));
+            salesHistory = rows.map(mapSale);
+            lastSalesLoad = Date.now();
         }
 
-        function cloudSyncCategories() {
-            products.forEach(p => { if (p.category && !categories.includes(p.category)) categories.push(p.category); });
-        }
-
-        // Loads everything first and only then replaces the in-memory state (all or nothing).
-        async function cloudLoadAll() {
-            const prods = await cloudFetchProducts();
-            const metaRes = await CLOUD.client.from('pos_shop_data').select('settings,categories,currencies,members').eq('shop_id', CLOUD.shop.id).maybeSingle();
-            if (metaRes.error) throw metaRes.error;
-            const meta = metaRes.data;
-            const sales = await cloudFetchSales(prods);
-
-            const base = Object.assign({}, DEFAULT_SETTINGS, { name: CLOUD.shop.name, phone: '', promptpay: '', vatRate: 0, currency: '₭' });
-            storeSettings = Object.assign(base, (meta && meta.settings) || {});
-            products = prods;
-            salesHistory = sales;
-
-            let cats = (meta && Array.isArray(meta.categories)) ? meta.categories.filter(c => typeof c === 'string' && c) : [];
-            if (!cats.length) cats = Array.from(new Set(prods.map(p => p.category).filter(Boolean)));
-            if (!cats.length) cats = [...DEFAULT_CATEGORIES];
-            categories = cats;
-            cloudSyncCategories();
-
-            currencies = (meta && Array.isArray(meta.currencies) && meta.currencies.length) ? meta.currencies : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
-            members = (meta && Array.isArray(meta.members)) ? meta.members : [];
-
-            CLOUD.lastMeta = '';
-            return !!meta;   // false = first time this shop uses the POS: settings row gets created
-        }
-
-        async function cloudReloadProducts() {
-            products = await cloudFetchProducts();
-            cloudSyncCategories();
-        }
-
-        async function cloudRefresh() {
-            if (CLOUD.busy) return;
-            CLOUD.busy = true;
+        async function lmRefreshSales(force) {
+            if (!cloudReady) return;
+            if (!force && Date.now() - lastSalesLoad < 30000) return;
             try {
-                if (CLOUD.metaTimer) { clearTimeout(CLOUD.metaTimer); await cloudFlushMeta(); }
-                await cloudLoadAll();
+                await loadCloudSales();
+                renderAdminSalesHistoryTable();
+                updateDashboardMetrics();
+            } catch (err) { console.error(err); }
+        }
+
+        async function lmReloadAll() {
+            if (!cloudReady) return;
+            try {
+                await loadCloudSettings();
+                await Promise.all([loadCloudProducts(), loadCloudSales()]);
                 fullRefresh();
-                showToast('ໂຫຼດຂໍ້ມູນຈາກ SQL ໃໝ່ແລ້ວ');
-            } catch (err) { cloudHandleError(err); }
-            finally { CLOUD.busy = false; }
+                showToast('โหลดข้อมูลล่าสุดจาก LaoMarket แล้ว');
+            } catch (err) {
+                showToast('โหลดข้อมูลไม่สำเร็จ: ' + lmErr(err.message), 'error');
+            }
         }
 
-        function cloudRenderAll() {
-            renderCategoryPills();
-            renderCategoryOptions();
-            renderProducts();
-            renderCart();
-            renderAdminProductTable();
-            renderAdminSalesHistoryTable();
-            updateDashboardMetrics();
-        }
-
-        // ---------- settings / categories / currencies / members (pos_shop_data) ----------
-        function cloudQueueMetaSave(force) {
-            if (!CLOUD.active) return;
-            clearTimeout(CLOUD.metaTimer);
-            CLOUD.metaTimer = setTimeout(cloudFlushMeta, force ? 0 : 700);
-        }
-
-        async function cloudFlushMeta() {
-            CLOUD.metaTimer = null;
-            if (!CLOUD.shop) return;
-            const row = { settings: storeSettings, categories: categories, currencies: currencies, members: members };
-            const json = JSON.stringify(row);
-            if (json === CLOUD.lastMeta) return;
-            try {
-                const { error } = await CLOUD.client.from('pos_shop_data').upsert(
-                    Object.assign({ shop_id: CLOUD.shop.id, updated_at: new Date().toISOString() }, row),
-                    { onConflict: 'shop_id' }
-                );
-                if (error) throw error;
-                CLOUD.lastMeta = json;
-            } catch (err) { cloudHandleError(err); }
-        }
-
-        // ---------- products ----------
-        function cloudProductParams(p) {
-            const low = (p.lowStock === null || p.lowStock === undefined || isNaN(p.lowStock)) ? null : Math.round(p.lowStock);
-            return {
-                p_id: p.uuid || null,
-                p_shop: CLOUD.shop.id,
-                p_name: p.name,
-                p_barcode: p.barcode,
-                p_category: p.category,
-                p_price: Math.round(p.price),
-                p_cost: Math.round(p.cost || 0),
-                p_stock: Math.round(p.stock),
-                p_low_stock: low,
-                p_image: (!p.image || p.image === DEFAULT_PRODUCT_IMAGE) ? '' : p.image,
-                p_active: p.active !== false
-            };
-        }
-
-        async function cloudUpsertProduct(p) {
-            const { data, error } = await CLOUD.client.rpc('pos_save_product', cloudProductParams(p));
-            if (error) throw error;
-            return data;
-        }
-
-        async function cloudSaveProduct(p) {
-            if (CLOUD.busy) return;
-            CLOUD.busy = true;
-            try {
-                await cloudUpsertProduct(p);
-                await cloudReloadProducts();
-                closeProductModal();
-                cloudRenderAll();
-                showToast('ບັນທຶກສິນຄ້າລົງ SQL ສຳເລັດ');
-            } catch (err) { cloudHandleError(err); }
-            finally { CLOUD.busy = false; }
-        }
-
-        async function cloudToggleActive(prod) {
-            if (CLOUD.busy) return;
-            CLOUD.busy = true;
-            try {
-                await cloudUpsertProduct(Object.assign({}, prod, { active: prod.active === false }));
-                await cloudReloadProducts();
-                cloudRenderAll();
-                const now = products.find(x => x.uuid === prod.uuid);
-                showToast(now && now.active ? 'ເປີດຂາຍສິນຄ້າແລ້ວ' : 'ປິດການຂາຍສິນຄ້າແລ້ວ');
-            } catch (err) { cloudHandleError(err); }
-            finally { CLOUD.busy = false; }
-        }
-
-        async function cloudAdjustStock(prod, delta) {
-            if (CLOUD.busy) return;
-            CLOUD.busy = true;
-            try {
-                const { data, error } = await CLOUD.client.rpc('pos_adjust_stock', { p_product: prod.uuid, p_delta: delta });
-                if (error) throw error;
-                prod.stock = Number(data);
-                cloudRenderAll();
-            } catch (err) { cloudHandleError(err); }
-            finally { CLOUD.busy = false; }
-        }
-
-        async function cloudDeleteProduct(prod) {
-            if (CLOUD.busy) return;
-            CLOUD.busy = true;
-            try {
-                const { error } = await CLOUD.client.rpc('seller_delete_product', { p_id: prod.uuid });
-                if (error) throw error;
-                products = products.filter(x => x.uuid !== prod.uuid);
-                cloudRenderAll();
-                showToast('ລຶບສິນຄ້າອອກຈາກ SQL ແລ້ວ');
-            } catch (err) { cloudHandleError(err); }
-            finally { CLOUD.busy = false; }
-        }
-
-        // ---------- sales ----------
-        async function cloudCheckout(totals, paidAmount) {
-            if (CLOUD.busy) return;
-            CLOUD.busy = true;
-            try {
-                const items = currentCart.map(ci => {
-                    const p = products.find(x => x.id === ci.id);
-                    if (!p || !p.uuid) throw new Error('product_not_found');
-                    return { id: p.uuid, qty: ci.qty };
-                });
-                const isCash = currentPaymentMode === 'CASH';
-                const { data, error } = await CLOUD.client.rpc('pos_checkout', {
-                    p_shop: CLOUD.shop.id,
-                    p_items: items,
-                    p_payment: isCash ? 'cash' : 'qr',
-                    p_paid: isCash ? Math.round(paidAmount) : null,
-                    p_discount: Math.round(totals.discount),
-                    p_vat_rate: parseFloat(storeSettings.vatRate) || 0
-                });
-                if (error) throw error;
-
-                // Use the receipt exactly as stored in SQL (server prices); fall back to the cart if the read fails.
-                let order = null;
+        function startAutoRefresh() {
+            clearInterval(refreshTimer);
+            refreshTimer = setInterval(async () => {
+                if (!cloudReady || paying || document.visibilityState !== 'visible') return;
                 try {
-                    const r = await CLOUD.client.from('pos_sales').select(CLOUD_SALE_COLS).eq('id', data.sale_id).single();
-                    if (!r.error) order = cloudMapSale(r.data, new Map(products.map(p => [p.uuid, p.id])));
-                } catch (e) { /* use fallback below */ }
-                if (!order) {
-                    const now = new Date();
-                    order = {
-                        id: data.sale_number, uuid: data.sale_id,
-                        date: now.toLocaleString('th-TH'), timestamp: now.getTime(),
-                        items: currentCart.map(i => ({ id: i.id, name: i.name, price: i.price, cost: i.cost || 0, qty: i.qty })),
-                        subtotal: Number(data.total) - Number(data.vat), vat: Number(data.vat),
-                        discount: Number(data.discount), total: Number(data.total),
-                        paid: Number(data.paid), change: Number(data.change),
-                        paymentMode: currentPaymentMode, voided: false
-                    };
-                }
-                salesHistory.unshift(order);
-                closePaymentModal();
-                openReceiptModal(order);
-                clearCart();
-                try { await cloudReloadProducts(); } catch (e) { console.error(e); }
-                cloudRenderAll();
-                showToast(t('msg_pay_success'));
-            } catch (err) {
-                cloudHandleError(err);
-                try { await cloudReloadProducts(); renderProducts(); } catch (e) { /* ignore */ }
-            } finally { CLOUD.busy = false; }
+                    await loadCloudProducts();
+                    renderProducts();
+                    if (!document.getElementById('tab-admin').classList.contains('hidden')) renderAdminProductTable();
+                } catch (err) { console.error(err); }
+            }, AUTO_REFRESH_MS);
         }
 
-        async function cloudVoidSale(order) {
-            if (CLOUD.busy) return;
-            CLOUD.busy = true;
-            try {
-                const { error } = await CLOUD.client.rpc('pos_void_sale', { p_sale: order.uuid });
-                if (error) throw error;
-                order.voided = true;
-                await cloudReloadProducts();
-                cloudRenderAll();
-                showToast('ຍົກເລີກບິນ ແລະ ຄືນສະຕັອກໃນ SQL ແລ້ວ');
-            } catch (err) {
-                if (/already_voided/.test(String((err && err.message) || ''))) { order.voided = true; cloudRenderAll(); }
-                cloudHandleError(err);
-            } finally { CLOUD.busy = false; }
-        }
-
-        // ---------- import (products by barcode, categories, currencies, members, settings) ----------
-        async function cloudImport(data) {
-            if (CLOUD.busy) { showToast('ກຳລັງປະມວນຜົນ... ລອງໃໝ່ອີກຄັ້ງ', 'error'); return; }
-            if (!confirm('ນຳເຂົ້າສິນຄ້າຈາກໄຟລ໌ເຂົ້າ SQL? ສິນຄ້າທີ່ບາໂຄ້ດຕົງກັນຈະຖືກອັບເດດ, ປະຫວັດການຂາຍໃນໄຟລ໌ຈະບໍ່ຖືກນຳເຂົ້າ.')) return;
-            CLOUD.busy = true;
-            let ok = 0, fail = 0;
-            try {
-                showToast('ກຳລັງນຳເຂົ້າ... ກະລຸນາລໍຖ້າ');
-                for (const raw of data.products) {
-                    const barcode = String(raw.barcode || '').trim();
-                    const name = String(raw.name || '').trim();
-                    if (!name || !barcode) { fail++; continue; }
-                    const existing = products.find(x => x.barcode === barcode);
-                    const low = (raw.lowStock === null || raw.lowStock === undefined || raw.lowStock === '') ? null : parseInt(raw.lowStock, 10);
-                    try {
-                        await cloudUpsertProduct({
-                            uuid: existing ? existing.uuid : null, name, barcode,
-                            category: raw.category || 'Other',
-                            price: Math.max(0, parseFloat(raw.price) || 0),
-                            cost: Math.max(0, parseFloat(raw.cost) || 0),
-                            stock: Math.max(0, parseInt(raw.stock, 10) || 0),
-                            lowStock: isNaN(low) ? null : low,
-                            image: (typeof raw.image === 'string' && /^https:\/\//i.test(raw.image)) ? raw.image : '',
-                            active: raw.active !== false
-                        });
-                        ok++;
-                    } catch (e) { console.error(e); fail++; }
-                }
-                if (Array.isArray(data.categories)) data.categories.forEach(c => { if (typeof c === 'string' && c.trim() && !categories.includes(c.trim())) categories.push(c.trim()); });
-                if (Array.isArray(data.currencies) && data.currencies.length) currencies = data.currencies;
-                if (Array.isArray(data.members)) members = data.members;
-                if (data.storeSettings && typeof data.storeSettings === 'object') storeSettings = keepAdminSecurity(Object.assign({}, storeSettings, data.storeSettings));
-                await cloudReloadProducts();
-                cloudQueueMetaSave(true);
-                fullRefresh();
-                showToast(`ນຳເຂົ້າສຳເລັດ ${ok} ລາຍການ` + (fail ? ` (ຂ້າມ/ຜິດພາດ ${fail})` : ''), fail ? 'error' : 'success');
-            } catch (err) { cloudHandleError(err); }
-            finally { CLOUD.busy = false; }
-        }
-
-        // ------------------------------------------------------------
-        // Persistence
-        // ------------------------------------------------------------
+        // ---------- save (settings / wallets / members / categories -> shop_pos_data) ----------
         function saveState() {
-            if (CLOUD.active) { cloudQueueMetaSave(); return; }   // cloud mode: settings go to SQL, local data untouched
-            try {
-                const payload = { products, categories, salesHistory, storeSettings, currencies, members };
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-            } catch (err) {
-                console.error('Unable to save state', err);
-            }
+            if (!cloudReady) return;
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(flushState, 400);
         }
 
-        function loadState() {
-            let saved = null;
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (raw) saved = JSON.parse(raw);
-            } catch (err) {
-                console.error('Unable to load saved state', err);
-            }
-
-            if (saved && Array.isArray(saved.products) && saved.products.length) {
-                products = saved.products;
-            } else {
-                products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
-            }
-
-            if (saved && Array.isArray(saved.categories) && saved.categories.length) {
-                categories = saved.categories;
-            } else {
-                categories = [...DEFAULT_CATEGORIES];
-            }
-
-            if (saved && Array.isArray(saved.salesHistory)) {
-                salesHistory = saved.salesHistory;
-            } else {
-                salesHistory = [];
-                generateMockSalesHistory();
-            }
-
-            storeSettings = Object.assign({}, DEFAULT_SETTINGS, (saved && saved.storeSettings) || {});
-
-            currencies = (saved && Array.isArray(saved.currencies) && saved.currencies.length) ? saved.currencies : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
-            members = (saved && Array.isArray(saved.members)) ? saved.members : JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
+        async function flushState() {
+            if (!cloudReady) return;
+            const s = Object.assign({}, storeSettings);
+            delete s.adminPasswordHash; delete s.adminPasswordSalt; delete s.adminPin;
+            const now = new Date().toISOString();
+            const rows = [
+                { key: 'settings', value: s },
+                { key: 'currencies', value: currencies },
+                { key: 'members', value: members },
+                { key: 'categories', value: categories },
+                { key: 'product_meta', value: productMeta }
+            ].map(r => ({ shop_id: lmShop.id, key: r.key, value: r.value, updated_at: now }));
+            const { error } = await sb.from('shop_pos_data').upsert(rows, { onConflict: 'shop_id,key' });
+            if (error) showToast('บันทึกขึ้น LaoMarket ไม่สำเร็จ: ' + lmErr(error.message), 'error');
         }
 
-        function resetDemoData() {
-            if (CLOUD.active) { showToast('ໂໝດ Cloud ບໍ່ຮອງຮັບການຣີເຊັດເປັນຂໍ້ມູນຕົວຢ່າງ (ປ້ອງກັນຂໍ້ມູນຈິງໃນ SQL ຫາຍ)', 'error'); return; }
-            if (!confirm('ต้องการรีเซ็ตข้อมูลทั้งหมด (สินค้า/ประวัติการขาย/การตั้งค่า) กลับเป็นข้อมูลตัวอย่างหรือไม่? ระบบจะสำรองข้อมูลปัจจุบันไว้ให้ก่อน และสามารถกู้คืนได้ภายหลังจากส่วน "สำรองข้อมูล"')) return;
-            createBackupSnapshot(true, 'สำรองอัตโนมัติก่อนรีเซ็ตข้อมูล');
-            localStorage.removeItem(STORAGE_KEY);
-            products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
-            categories = [...DEFAULT_CATEGORIES];
-            salesHistory = [];
-            generateMockSalesHistory();
-            storeSettings = keepAdminSecurity(Object.assign({}, DEFAULT_SETTINGS));
-            currencies = JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
-            members = JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
-            saveState();
-            fullRefresh();
-            showToast('รีเซ็ตข้อมูลตัวอย่างเรียบร้อยแล้ว (สำรองข้อมูลเดิมไว้ให้แล้ว)');
+        async function saveAdminSecurity() {
+            if (!sb || !lmShop) return false;
+            const { error } = await sb.from('shop_pos_data').upsert({
+                shop_id: lmShop.id, key: 'admin_security',
+                value: { hash: storeSettings.adminPasswordHash, salt: storeSettings.adminPasswordSalt },
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'shop_id,key' });
+            if (error) { showToast('บันทึกรหัสผ่านไม่สำเร็จ: ' + lmErr(error.message), 'error'); return false; }
+            return true;
         }
 
         function exportData() {
             const exportSettings = Object.assign({}, storeSettings);
             delete exportSettings.adminPasswordHash; delete exportSettings.adminPasswordSalt; delete exportSettings.adminPin;
-            const payload = { products, categories, salesHistory, storeSettings: exportSettings, currencies, members, exportedAt: new Date().toISOString() };
+            const payload = {
+                shop: lmShop ? { id: lmShop.id, name: lmShop.name } : null,
+                products, categories, salesHistory, storeSettings: exportSettings, currencies, members,
+                exportedAt: new Date().toISOString()
+            };
             const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `smartpos-backup-${Date.now()}.json`;
+            a.href = URL.createObjectURL(blob);
+            a.download = 'smartpos-laomarket-' + new Date().toISOString().slice(0, 10) + '.json';
             document.body.appendChild(a);
             a.click();
             a.remove();
-            URL.revokeObjectURL(url);
-            showToast('ส่งออกข้อมูลสำเร็จ');
-        }
-
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (!Array.isArray(data.products)) throw new Error('invalid format');
-                    if (CLOUD.active) { cloudImport(data).finally(() => { event.target.value = ''; }); return; }
-                    createBackupSnapshot(true, 'สำรองอัตโนมัติก่อนนำเข้าข้อมูล');
-                    products = data.products;
-                    categories = Array.isArray(data.categories) && data.categories.length ? data.categories : [...DEFAULT_CATEGORIES];
-                    salesHistory = Array.isArray(data.salesHistory) ? data.salesHistory : [];
-                    storeSettings = keepAdminSecurity(Object.assign({}, DEFAULT_SETTINGS, data.storeSettings || {}));
-                    currencies = Array.isArray(data.currencies) && data.currencies.length ? data.currencies : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES));
-                    members = Array.isArray(data.members) ? data.members : [];
-                    saveState();
-                    fullRefresh();
-                    showToast('นำเข้าข้อมูลสำเร็จ');
-                } catch (err) {
-                    showToast('ไฟล์ไม่ถูกต้อง ไม่สามารถนำเข้าข้อมูลได้', 'error');
-                } finally {
-                    event.target.value = '';
-                }
-            };
-            reader.readAsText(file);
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         }
 
         function fullRefresh() {
@@ -1960,146 +1599,39 @@
             renderAdminProductTable();
             renderAdminSalesHistoryTable();
             updateDashboardMetrics();
-            renderBackupList();
             renderCurrencyTable();
             renderWalletList();
         }
 
-        // ------------------------------------------------------------
-        // Backup Snapshots (versioned local backups, separate from the
-        // live working data, so admins can roll back to an earlier point)
-        // ------------------------------------------------------------
-        const BACKUP_KEY = 'smartpos_pro_backups_v1';
-        const LAST_AUTO_BACKUP_KEY = 'smartpos_pro_last_autobackup';
-        const MAX_BACKUPS = 10;
-        const AUTO_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
-
-        function getBackups() {
-            try {
-                const raw = localStorage.getItem(BACKUP_KEY);
-                const list = raw ? JSON.parse(raw) : [];
-                return Array.isArray(list) ? list : [];
-            } catch (err) {
-                console.error('Unable to read backups', err);
-                return [];
-            }
-        }
-
-        function saveBackups(list) {
-            try {
-                localStorage.setItem(BACKUP_KEY, JSON.stringify(list));
-            } catch (err) {
-                console.error('Unable to save backups (storage may be full)', err);
-                showToast('พื้นที่จัดเก็บเต็ม ไม่สามารถบันทึกสำรองข้อมูลเพิ่มได้ กรุณาลบสำรองข้อมูลเก่าออกก่อน', 'error');
-            }
-        }
-
-        function createBackupSnapshot(isAuto, reasonLabel) {
-            const snapshot = {
-                id: Date.now(),
-                timestamp: Date.now(),
-                dateLabel: new Date().toLocaleString('th-TH'),
-                auto: !!isAuto,
-                reason: reasonLabel || null,
-                data: {
-                    products: JSON.parse(JSON.stringify(products)),
-                    categories: JSON.parse(JSON.stringify(categories)),
-                    salesHistory: JSON.parse(JSON.stringify(salesHistory)),
-                    storeSettings: (function() { const c = JSON.parse(JSON.stringify(storeSettings)); delete c.adminPasswordHash; delete c.adminPasswordSalt; delete c.adminPin; return c; })()
-                }
-            };
-
-            let backups = getBackups();
-            backups.unshift(snapshot);
-            if (backups.length > MAX_BACKUPS) {
-                backups = backups.slice(0, MAX_BACKUPS);
-            }
-            saveBackups(backups);
-
-            if (isAuto) {
-                localStorage.setItem(LAST_AUTO_BACKUP_KEY, String(Date.now()));
-            }
-
-            renderBackupList();
-            if (!isAuto) showToast('สำรองข้อมูลเรียบร้อยแล้ว');
-        }
-
-        function checkAutoBackup() {
-            let lastAuto = 0;
-            try {
-                lastAuto = parseInt(localStorage.getItem(LAST_AUTO_BACKUP_KEY), 10) || 0;
-            } catch (err) { lastAuto = 0; }
-
-            if (Date.now() - lastAuto >= AUTO_BACKUP_INTERVAL_MS) {
-                createBackupSnapshot(true);
-            }
-        }
-
-        function renderBackupList() {
-            const container = document.getElementById('backup-list');
-            const infoEl = document.getElementById('last-backup-info');
-            const maxEl = document.getElementById('max-backup-count');
-            if (!container) return;
-
-            if (maxEl) maxEl.innerText = MAX_BACKUPS;
-
-            const backups = getBackups();
-
-            if (infoEl) {
-                infoEl.innerText = backups.length
-                    ? `สำรองข้อมูลล่าสุด: ${backups[0].dateLabel} ${backups[0].auto ? '(อัตโนมัติ)' : '(บันทึกเอง)'}`
-                    : 'ยังไม่มีการสำรองข้อมูล';
-            }
-
-            if (backups.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">ยังไม่มีสำรองข้อมูล กดปุ่ม "สำรองข้อมูลตอนนี้" เพื่อเริ่มต้น</p>';
-                return;
-            }
-
-            container.innerHTML = backups.map(b => `
-                <div class="flex items-center justify-between gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-                    <div class="min-w-0">
-                        <div class="font-semibold text-slate-700 truncate">${escapeHtml(b.dateLabel)}</div>
-                        <div class="text-[10px] text-slate-400">${b.reason ? escapeHtml(b.reason) : (b.auto ? 'สำรองอัตโนมัติ' : 'บันทึกด้วยตนเอง')} • สินค้า ${b.data.products.length} รายการ • บิล ${b.data.salesHistory.length} รายการ</div>
-                    </div>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button onclick="restoreBackup(${b.id})" class="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-600 rounded-lg font-semibold flex items-center gap-1">
-                            <i class="fa-solid fa-clock-rotate-left"></i> กู้คืน
-                        </button>
-                        <button onclick="deleteBackup(${b.id})" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function restoreBackup(id) {
-            const backups = getBackups();
-            const backup = backups.find(b => b.id === id);
-            if (!backup) return;
-
-            if (CLOUD.active) { showToast('ໂໝດ Cloud ບໍ່ຮອງຮັບການກູ້ຄືນຈາກ Snapshot ໃນເຄື່ອງ — ໃຊ້ "ນຳເຂົ້າຂໍ້ມູນ (JSON)" ແທນ', 'error'); return; }
-            if (!confirm(`ต้องการกู้คืนข้อมูล ณ วันที่ ${backup.dateLabel} หรือไม่? ข้อมูลปัจจุบันในระบบจะถูกแทนที่ (แนะนำให้สำรองข้อมูลปัจจุบันก่อนกู้คืน)`)) return;
-
-            products = JSON.parse(JSON.stringify(backup.data.products));
-            categories = JSON.parse(JSON.stringify(backup.data.categories));
-            salesHistory = JSON.parse(JSON.stringify(backup.data.salesHistory));
-            storeSettings = keepAdminSecurity(Object.assign({}, DEFAULT_SETTINGS, backup.data.storeSettings));
-
-            saveState();
-            fullRefresh();
-            showToast('กู้คืนข้อมูลเรียบร้อยแล้ว');
-        }
-
-        function deleteBackup(id) {
-            if (!confirm('ต้องการลบสำรองข้อมูลนี้หรือไม่?')) return;
-            let backups = getBackups();
-            backups = backups.filter(b => b.id !== id);
-            saveBackups(backups);
-            renderBackupList();
-            showToast('ลบสำรองข้อมูลเรียบร้อยแล้ว');
-        }
+async function lmCompress(file,max){
+ const TARGET=600*1024,HARD=1.9*1024*1024;
+ if(!/^image\/(jpeg|png|webp)$/.test(file.type))throw new Error('ຮອງຮັບສະເພາະ JPG, PNG, WebP');
+ if(file.size>40*1024*1024)throw new Error('ໄຟລ໌ໃຫຍ່ເກີນ 40MB');
+ const u=URL.createObjectURL(file);
+ const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('ອ່ານຮູບບໍ່ໄດ້'));i.src=u});
+ URL.revokeObjectURL(u);
+ const W=img.naturalWidth,H=img.naturalHeight;
+ const enc=(d,q)=>new Promise((ok,no)=>{
+  const r=Math.min(1,d/Math.max(W,H)),c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(W*r));c.height=Math.max(1,Math.round(H*r));
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+  c.toBlob(b=>b?ok(b):no(new Error('ແປງຮູບບໍ່ໄດ້')),'image/jpeg',q);
+ });
+ let d=Math.min(max||1280,Math.max(W,H)),blob;
+ for(;;){
+  for(const q of [0.85,0.75,0.65,0.55,0.45]){blob=await enc(d,q);if(blob.size<=TARGET)return blob}
+  if(d<=480)break;
+  d=Math.max(480,Math.round(d*0.8));
+ }
+ if(blob.size<=HARD)return blob;
+ throw new Error('ບີບຮູບໃຫ້ນ້ອຍພໍບໍ່ໄດ້ — ກະລຸນາໃຊ້ຮູບອື່ນ');
+}
+async function lmUpload(sb,uid,file){
+ const blob=await lmCompress(file),id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
+ const path=uid+'/'+id+'.jpg',{error}=await sb.storage.from('product-images').upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});
+ if(error)throw error;
+ return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+}
 
         // ------------------------------------------------------------
         // Clock
@@ -2369,23 +1901,20 @@
                     paymentBreakdownChart.resize();
                 }
                 updateDashboardMetrics();
+                if (typeof lmRefreshSales === 'function') lmRefreshSales(false);
             }
         }
 
         // ------------------------------------------------------------
-        // Admin password (required) + LaoMarket-assisted reset
+        // Admin password (required). The hash is stored in LaoMarket (shop_pos_data),
+        // so a forgotten password is reset by the LaoMarket main admin.
         // ------------------------------------------------------------
-        // Contact details of the LaoMarket main admin, shown on the "forgot password" screen.
         const LAOMARKET_SUPPORT = {
             name: 'ແອັດມິນຫຼັກ LaoMarket',
             phone: '',      // ເຊັ່ນ '020 xxxx xxxx'
             whatsapp: '',   // ເຊັ່ນ '020 xxxx xxxx'
             email: ''       // ເຊັ່ນ 'support@laomarket.la'
         };
-        // Reset code issued by the LaoMarket main admin (stored only as hashes).
-        // To change it, replace both hashes (SHA-256 and fallback) for your new code.
-        const LAOMARKET_RESET_CODE_SHA256 = '3ab644cf3dd98660a37a04c1defdcc3d0ddede9b7d22345f3c89a4a0b25b49ee';
-        const LAOMARKET_RESET_CODE_FALLBACK = '84565996a4c01d89';
         const MIN_PASSWORD_LENGTH = 6;
         const MAX_LOGIN_ATTEMPTS = 5;
         const LOGIN_LOCK_MS = 30000;
@@ -2425,36 +1954,28 @@
         }
 
         function hasAdminPassword() {
-            return !!(storeSettings.adminPasswordHash || storeSettings.adminPin);
-        }
-
-        // Keep the current password when settings are replaced by import / reset / restore
-        function keepAdminSecurity(newSettings) {
-            newSettings.adminPasswordHash = storeSettings.adminPasswordHash || '';
-            newSettings.adminPasswordSalt = storeSettings.adminPasswordSalt || '';
-            if (storeSettings.adminPin) newSettings.adminPin = storeSettings.adminPin; else delete newSettings.adminPin;
-            return newSettings;
+            return !!storeSettings.adminPasswordHash;
         }
 
         async function verifyAdminPassword(entered) {
-            if (storeSettings.adminPasswordHash) {
-                const algo = storeSettings.adminPasswordHash.slice(0, 2);
-                const h = await hashPassword(entered, storeSettings.adminPasswordSalt || '', algo);
-                return h === storeSettings.adminPasswordHash;
-            }
-            if (storeSettings.adminPin) return entered === String(storeSettings.adminPin); // legacy PIN
-            return false;
+            if (!storeSettings.adminPasswordHash) return false;
+            const algo = storeSettings.adminPasswordHash.slice(0, 2);
+            const h = await hashPassword(entered, storeSettings.adminPasswordSalt || '', algo);
+            return h === storeSettings.adminPasswordHash;
         }
 
+        // Returns true when the new password was saved to LaoMarket
         async function setAdminPassword(pw) {
+            const oldHash = storeSettings.adminPasswordHash, oldSalt = storeSettings.adminPasswordSalt;
             const bytes = new Uint8Array(16);
             if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes);
             else for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
             const salt = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
             storeSettings.adminPasswordSalt = salt;
             storeSettings.adminPasswordHash = await hashPassword(pw, salt);
-            delete storeSettings.adminPin;
-            saveState();
+            const ok = await saveAdminSecurity();
+            if (!ok) { storeSettings.adminPasswordHash = oldHash; storeSettings.adminPasswordSalt = oldSalt; }
+            return ok;
         }
 
         function validateNewPassword(pw, pw2) {
@@ -2478,6 +1999,8 @@
             if (LAOMARKET_SUPPORT.whatsapp) rows.push(`<div><i class="fa-brands fa-whatsapp w-4"></i> ${escapeHtml(LAOMARKET_SUPPORT.whatsapp)}</div>`);
             if (LAOMARKET_SUPPORT.email) rows.push(`<div><i class="fa-solid fa-envelope w-4"></i> ${escapeHtml(LAOMARKET_SUPPORT.email)}</div>`);
             el.innerHTML = rows.join('');
+            const idEl = document.getElementById('auth-shop-id');
+            if (idEl) idEl.innerText = lmShop ? lmShop.id : '';
         }
 
         function showAuthMode(mode) {
@@ -2498,13 +2021,13 @@
                 title.innerText = 'ລືມລະຫັດຜ່ານ';
                 icon.className = 'fa-solid fa-key text-2xl text-amber-400 mb-1';
                 renderSupportContact();
-                setTimeout(() => document.getElementById('auth-reset-code').focus(), 50);
             }
         }
 
-        function openAdminAuthModal() {
-            ['auth-password', 'auth-setup-pw', 'auth-setup-pw2', 'auth-reset-code', 'auth-reset-pw', 'auth-reset-pw2']
+        async function openAdminAuthModal() {
+            ['auth-password', 'auth-setup-pw', 'auth-setup-pw2']
                 .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            await lmSyncAdminSecurity(); // pick up a reset done by the LaoMarket admin / a change from another device
             document.getElementById('pin-modal').classList.remove('hidden');
             showAuthMode(hasAdminPassword() ? 'login' : 'setup');
         }
@@ -2530,9 +2053,6 @@
             const input = document.getElementById('auth-password');
             const entered = input.value;
             if (await verifyAdminPassword(entered)) {
-                if (!storeSettings.adminPasswordHash && storeSettings.adminPin) {
-                    await setAdminPassword(entered); // upgrade legacy PIN to a hashed password
-                }
                 input.value = '';
                 unlockAdmin();
             } else {
@@ -2551,40 +2071,26 @@
 
         async function submitAdminSetup(e) {
             e.preventDefault();
+            await lmSyncAdminSecurity();
             if (hasAdminPassword()) { showAuthMode('login'); return; }
             const pw = document.getElementById('auth-setup-pw').value;
             const pw2 = document.getElementById('auth-setup-pw2').value;
             const err = validateNewPassword(pw, pw2);
             if (err) { setAuthError('auth-setup-error', err); return; }
-            await setAdminPassword(pw);
+            if (!(await setAdminPassword(pw))) { setAuthError('auth-setup-error', 'ບັນທຶກລະຫັດຜ່ານຂຶ້ນ LaoMarket ບໍ່ສຳເລັດ ລອງໃໝ່ອີກຄັ້ງ'); return; }
             showToast('ຕັ້ງລະຫັດຜ່ານຫນ້າແອັດມິນສຳເລັດແລ້ວ');
             unlockAdmin();
         }
 
-        async function submitAdminReset(e) {
-            e.preventDefault();
-            const code = document.getElementById('auth-reset-code').value.trim();
-            const pw = document.getElementById('auth-reset-pw').value;
-            const pw2 = document.getElementById('auth-reset-pw2').value;
-            const now = Date.now();
-            if (now < authLockedUntil) {
-                setAuthError('auth-forgot-error', `ລອງຜິດຫຼາຍເກີນໄປ ກະລຸນາລໍຖ້າ ${Math.ceil((authLockedUntil - now) / 1000)} ວິນາທີ`);
-                return;
+        // After the LaoMarket main admin has reset the password, the shop owner checks again and sets a new one
+        async function recheckAdminReset() {
+            await lmSyncAdminSecurity();
+            if (!hasAdminPassword()) {
+                showAuthMode('setup');
+                showToast('ແອັດມິນ LaoMarket ຣີເຊັດໃຫ້ແລ້ວ ກະລຸນາຕັ້ງລະຫັດຜ່ານໃໝ່');
+            } else {
+                setAuthError('auth-forgot-error', 'ຍັງບໍ່ໄດ້ຮັບການຣີເຊັດຈາກແອັດມິນ LaoMarket');
             }
-            const sha = await sha256Hex(code);
-            const codeOk = sha ? (sha === LAOMARKET_RESET_CODE_SHA256) : (fallbackHash(code) === LAOMARKET_RESET_CODE_FALLBACK);
-            if (!code || !codeOk) {
-                authFailCount++;
-                if (authFailCount >= MAX_LOGIN_ATTEMPTS) { authLockedUntil = Date.now() + LOGIN_LOCK_MS; authFailCount = 0; }
-                setAuthError('auth-forgot-error', 'ລະຫັດປົດລັອກບໍ່ຖືກຕ້ອງ ກະລຸນາຕິດຕໍ່ແອັດມິນຫຼັກຂອງ LaoMarket');
-                return;
-            }
-            const err = validateNewPassword(pw, pw2);
-            if (err) { setAuthError('auth-forgot-error', err); return; }
-            await setAdminPassword(pw);
-            authFailCount = 0;
-            showAuthMode('login');
-            showToast('ປ່ຽນລະຫັດຜ່ານໃໝ່ສຳເລັດແລ້ວ ກະລຸນາເຂົ້າສູ່ລະບົບດ້ວຍລະຫັດຜ່ານໃໝ່');
         }
 
         async function changeAdminPassword(e) {
@@ -2599,7 +2105,7 @@
             }
             const err = validateNewPassword(pw, pw2);
             if (err) { showToast(err, 'error'); return; }
-            await setAdminPassword(pw);
+            if (!(await setAdminPassword(pw))) return;
             form.reset();
             showToast('ປ່ຽນລະຫັດຜ່ານຫນ້າແອັດມິນສຳເລັດແລ້ວ');
         }
@@ -2607,23 +2113,11 @@
         // ------------------------------------------------------------
         // Application Initialization
         // ------------------------------------------------------------
-        window.onload = async function() {
-            loadState();
+        window.onload = function() {
             initClock();
-            renderCategoryPills();
-            renderCategoryOptions();
-            renderProducts();
-            renderCart();
             setupHardwareBarcodeScanner();
-            renderCategoryManagerList();
-            populateSettingsForm();
-            applyHeaderAndReceiptSettings();
-            renderBackupList();
-            renderCurrencyTable();
-            renderWalletList();
-            checkAutoBackup();
             changeLanguage('th');
-            await cloudBoot();   // connect to Supabase (login) or fall back to local mode
+            cloudBoot();
         };
 
         // ------------------------------------------------------------
@@ -2693,7 +2187,8 @@
 
         function removeCategory(name) {
             const inUse = products.some(p => p.category === name);
-            if (inUse && !confirm(`หมวดหมู่ "${name}" ยังมีสินค้าอยู่ในระบบ ต้องการลบหมวดหมู่นี้หรือไม่? สินค้าที่เกี่ยวข้องจะยังคงอยู่แต่ไม่มีหมวดหมู่ที่ตรงกัน`)) {
+            if (inUse) {
+                showToast('ยังมีสินค้าใช้หมวดหมู่นี้อยู่ กรุณาย้ายสินค้าไปหมวดอื่นก่อน', 'error');
                 return;
             }
             categories = categories.filter(c => c !== name);
@@ -2763,7 +2258,7 @@
                         </div>
                         <div class="flex items-center justify-between pt-1 border-t border-slate-100">
                             <div>
-                                <span class="text-sm font-bold font-mono text-sky-600">${storeSettings.currency}${p.price.toFixed(2)}</span>
+                                <span class="text-sm font-bold font-mono text-sky-600">${money(p.price)}</span>
                                 <div class="text-[10px] text-slate-400">${t('lbl_stock_rem')}: ${p.stock}</div>
                             </div>
                             <button class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 group-hover:bg-sky-600 group-hover:text-white flex items-center justify-center transition-colors">
@@ -2842,7 +2337,7 @@
         function applyDiscount(value) {
             let val = parseFloat(value);
             if (isNaN(val) || val < 0) val = 0;
-            currentDiscount = CLOUD.active ? Math.round(val) : val;
+            currentDiscount = Math.round(val);
             renderCart();
         }
 
@@ -2895,15 +2390,15 @@
                 div.innerHTML = `
                     <div class="flex-1 min-w-0">
                         <h4 class="font-bold text-xs text-slate-800 truncate">${escapeHtml(item.name)}</h4>
-                        <div class="text-[11px] text-slate-400 font-mono">${storeSettings.currency}${item.price.toFixed(2)} x ${item.qty}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">${money(item.price)} x ${item.qty}</div>
                     </div>
                     <div class="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl">
-                        <button onclick="updateQty(${item.id}, -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm text-slate-600 hover:text-sky-600 flex items-center justify-center font-bold text-xs">-</button>
+                        <button onclick="updateQty('${escapeAttr(item.id)}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm text-slate-600 hover:text-sky-600 flex items-center justify-center font-bold text-xs">-</button>
                         <span class="w-6 text-center font-bold text-xs font-mono">${item.qty}</span>
-                        <button onclick="updateQty(${item.id}, 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm text-slate-600 hover:text-sky-600 flex items-center justify-center font-bold text-xs">+</button>
+                        <button onclick="updateQty('${escapeAttr(item.id)}', 1)" class="w-6 h-6 rounded-lg bg-white shadow-sm text-slate-600 hover:text-sky-600 flex items-center justify-center font-bold text-xs">+</button>
                     </div>
                     <div class="text-right min-w-[65px]">
-                        <span class="font-bold font-mono text-xs text-slate-800">${storeSettings.currency}${itemTotal.toFixed(2)}</span>
+                        <span class="font-bold font-mono text-xs text-slate-800">${money(itemTotal)}</span>
                     </div>
                 `;
                 container.appendChild(div);
@@ -2911,11 +2406,11 @@
 
             const totals = calculateCartTotals();
 
-            document.getElementById('summary-subtotal').innerText = `${storeSettings.currency}${totals.subtotalExVat.toFixed(2)}`;
+            document.getElementById('summary-subtotal').innerText = `${money(totals.subtotalExVat)}`;
             const vatLabel = document.querySelector('[data-i18n="lbl_vat"]');
             if (vatLabel) vatLabel.innerText = `${t('lbl_vat')} (${storeSettings.vatRate}%)`;
-            document.getElementById('summary-vat').innerText = `${storeSettings.currency}${totals.vat.toFixed(2)}`;
-            document.getElementById('summary-total').innerText = `${storeSettings.currency}${totals.total.toFixed(2)}`;
+            document.getElementById('summary-vat').innerText = `${money(totals.vat)}`;
+            document.getElementById('summary-total').innerText = `${money(totals.total)}`;
             document.getElementById('summary-item-count').innerText = `${totals.totalItems} ${t('lbl_items_unit')}`;
         }
 
@@ -3026,7 +2521,7 @@
 
             if (subtab === 'products') renderAdminProductTable();
             if (subtab === 'history') renderAdminSalesHistoryTable();
-            if (subtab === 'settings') { populateSettingsForm(); renderCategoryManagerList(); renderBackupList(); }
+            if (subtab === 'settings') { populateSettingsForm(); renderCategoryManagerList(); }
             if (subtab === 'wallets') { renderCurrencyTable(); renderWalletList(); populateWalletFormSelectors(); }
             if (subtab === 'dashboard') {
                 updateDashboardMetrics();
@@ -3046,14 +2541,14 @@
             const total = calculateCartTotal();
 
             document.getElementById('pay-modal-title').innerText = mode === 'CASH' ? 'รับชำระเงินด้วยเงินสด' : 'รับชำระด้วย QR Code โอนเงิน';
-            document.getElementById('pay-modal-amount').innerText = `${storeSettings.currency}${total.toFixed(2)}`;
+            document.getElementById('pay-modal-amount').innerText = `${money(total)}`;
 
             if (mode === 'CASH') {
                 document.getElementById('pay-cash-section').classList.remove('hidden');
                 document.getElementById('pay-qr-section').classList.add('hidden');
                 const cashInput = document.getElementById('cash-received-input');
                 cashInput.value = '';
-                document.getElementById('cash-change-display').innerText = `${storeSettings.currency}0.00`;
+                document.getElementById('cash-change-display').innerText = `${money(0)}`;
                 setTimeout(() => cashInput.focus(), 100);
             } else {
                 document.getElementById('pay-cash-section').classList.add('hidden');
@@ -3075,7 +2570,7 @@
             const total = calculateCartTotal();
             const input = document.getElementById('cash-received-input');
             if (amount === 'exact') {
-                input.value = total.toFixed(2);
+                input.value = Math.round(total);
             } else {
                 input.value = amount;
             }
@@ -3089,22 +2584,23 @@
             const changeDisplay = document.getElementById('cash-change-display');
 
             if (change >= 0) {
-                changeDisplay.innerText = `${storeSettings.currency}${change.toFixed(2)}`;
+                changeDisplay.innerText = `${money(change)}`;
                 changeDisplay.className = "font-mono text-xl font-bold text-emerald-600";
             } else {
-                changeDisplay.innerText = `ขาดอีก ${storeSettings.currency}${Math.abs(change).toFixed(2)}`;
+                changeDisplay.innerText = `ขาดอีก ${money(Math.abs(change))}`;
                 changeDisplay.className = "font-mono text-base font-bold text-rose-500";
             }
         }
 
-        function confirmPayment() {
+        async function confirmPayment() {
+            if (paying) return;
             const totals = calculateCartTotals();
-            const total = totals.total;
+            const total = Math.round(totals.total);
             let paidAmount = total;
             let changeAmount = 0;
 
             if (currentPaymentMode === 'CASH') {
-                paidAmount = parseFloat(document.getElementById('cash-received-input').value) || 0;
+                paidAmount = Math.round(parseFloat(document.getElementById('cash-received-input').value) || 0);
                 if (paidAmount < total) {
                     showToast("จำนวนเงินที่รับมาไม่ครบตามยอดชำระ", "error");
                     return;
@@ -3112,9 +2608,6 @@
                 changeAmount = paidAmount - total;
             }
 
-            if (CLOUD.active) { cloudCheckout(totals, paidAmount); return; }   // server-side stock + receipt
-
-            // Validate & deduct inventory stock
             for (const cartItem of currentCart) {
                 const prod = products.find(p => p.id === cartItem.id);
                 if (!prod || prod.stock < cartItem.qty) {
@@ -3122,29 +2615,50 @@
                     return;
                 }
             }
-            currentCart.forEach(cartItem => {
-                const prod = products.find(p => p.id === cartItem.id);
-                if (prod) prod.stock -= cartItem.qty;
-            });
 
-            const orderId = 'ORD-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Date.now().toString().slice(-5);
+            paying = true;
+            const btn = document.getElementById('btn-confirm-payment');
+            if (btn) btn.disabled = true;
+            const cartSnapshot = currentCart.map(i => ({ id: i.id, name: i.name, price: i.price, cost: i.cost || 0, qty: i.qty }));
+            const { data, error } = await sb.rpc('pos_checkout', {
+                p_shop: lmShop.id,
+                p_items: cartSnapshot.map(i => ({ id: i.id, qty: i.qty })),
+                p_payment: currentPaymentMode === 'CASH' ? 'cash' : 'qr',
+                p_paid: currentPaymentMode === 'CASH' ? paidAmount : null,
+                p_discount: Math.round(totals.discount)
+            });
+            paying = false;
+            if (btn) btn.disabled = false;
+
+            if (error) {
+                showToast('บันทึกการขายไม่สำเร็จ: ' + lmErr(error.message), 'error');
+                try { await loadCloudProducts(); renderProducts(); } catch (e2) { /* ignore */ }
+                return;
+            }
+
+            const vr = getVatRate();
+            const saleTotal = Number(data.total);
+            const vat = saleTotal - saleTotal / (1 + vr);
             const orderRecord = {
-                id: orderId,
+                id: data.sale_number,
+                saleId: data.sale_id,
                 date: new Date().toLocaleString('th-TH'),
                 timestamp: Date.now(),
-                items: currentCart.map(i => ({ id: i.id, name: i.name, price: i.price, cost: i.cost || 0, qty: i.qty })),
-                subtotal: totals.subtotalExVat,
-                vat: totals.vat,
-                discount: totals.discount,
-                total: total,
-                paid: paidAmount,
-                change: changeAmount,
+                items: cartSnapshot,
+                subtotal: saleTotal - vat,
+                vat: vat,
+                discount: Number(data.discount),
+                total: saleTotal,
+                paid: Number(data.paid),
+                change: Number(data.change),
                 paymentMode: currentPaymentMode,
                 voided: false
             };
-
             salesHistory.unshift(orderRecord);
-            saveState();
+            cartSnapshot.forEach(ci => {
+                const prod = products.find(p => p.id === ci.id);
+                if (prod) prod.stock -= ci.qty;
+            });
 
             closePaymentModal();
             renderProducts();
@@ -3152,6 +2666,7 @@
             clearCart();
             updateDashboardMetrics();
             showToast(t('msg_pay_success'));
+            loadCloudProducts().then(() => { renderProducts(); renderAdminProductTable(); }).catch(() => {});
         }
 
         // ------------------------------------------------------------
@@ -3171,16 +2686,16 @@
                 row.className = 'flex justify-between text-[11px]';
                 row.innerHTML = `
                     <span class="truncate max-w-[180px]">${escapeHtml(item.name)} x${item.qty}</span>
-                    <span class="font-mono">${storeSettings.currency}${(item.price * item.qty).toFixed(2)}</span>
+                    <span class="font-mono">${money((item.price * item.qty))}</span>
                 `;
                 listContainer.appendChild(row);
             });
 
-            document.getElementById('rec-subtotal').innerText = `${storeSettings.currency}${order.subtotal.toFixed(2)}`;
-            document.getElementById('rec-vat').innerText = `${storeSettings.currency}${order.vat.toFixed(2)}`;
-            document.getElementById('rec-total').innerText = `${storeSettings.currency}${order.total.toFixed(2)}`;
-            document.getElementById('rec-paid').innerText = `${storeSettings.currency}${order.paid.toFixed(2)}`;
-            document.getElementById('rec-change').innerText = `${storeSettings.currency}${order.change.toFixed(2)}`;
+            document.getElementById('rec-subtotal').innerText = `${money(order.subtotal)}`;
+            document.getElementById('rec-vat').innerText = `${money(order.vat)}`;
+            document.getElementById('rec-total').innerText = `${money(order.total)}`;
+            document.getElementById('rec-paid').innerText = `${money(order.paid)}`;
+            document.getElementById('rec-change').innerText = `${money(order.change)}`;
 
             const footerEl = document.getElementById('rec-footer-note');
             if (footerEl) footerEl.innerText = storeSettings.receiptFooter;
@@ -3235,52 +2750,100 @@
                     <td class="p-3 font-semibold text-slate-800">${escapeHtml(p.name)}${p.active === false ? ' <span class="text-[10px] text-slate-400">(ปิดขาย)</span>' : ''}</td>
                     <td class="p-3 font-mono text-slate-500">${escapeHtml(p.barcode)}</td>
                     <td class="p-3"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-semibold">${escapeHtml(p.category)}</span></td>
-                    <td class="p-3 text-right font-mono font-bold text-sky-600">${storeSettings.currency}${p.price.toFixed(2)}</td>
+                    <td class="p-3 text-right font-mono font-bold text-sky-600">${money(p.price)}</td>
                     <td class="p-3 text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button onclick="quickAdjustStock(${p.id}, -1)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">-</button>
+                            <button onclick="quickAdjustStock('${escapeAttr(p.id)}', -1)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">-</button>
                             <span class="px-2 py-1 rounded-md font-mono font-bold text-xs min-w-[2.5rem] inline-block ${isLow ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}">
                                 ${p.stock}
                             </span>
-                            <button onclick="quickAdjustStock(${p.id}, 1)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">+</button>
+                            <button onclick="quickAdjustStock('${escapeAttr(p.id)}', 1)" class="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">+</button>
                         </div>
                     </td>
                     <td class="p-3 text-center space-x-1">
-                        <button onclick="editProduct(${p.id})" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="toggleProductActive(${p.id})" class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg" title="${p.active === false ? 'เปิดขาย' : 'ปิดขาย'}"><i class="fa-solid ${p.active === false ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
-                        <button onclick="deleteProduct(${p.id})" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="editProduct('${escapeAttr(p.id)}')" class="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg" title="แก้ไข"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="toggleProductActive('${escapeAttr(p.id)}')" class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg" title="${p.active === false ? 'เปิดขาย' : 'ปิดขาย'}"><i class="fa-solid ${p.active === false ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+                        <button onclick="deleteProduct('${escapeAttr(p.id)}')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg" title="ลบ"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function quickAdjustStock(id, delta) {
-            const prod = products.find(p => p.id === id);
-            if (!prod) return;
-            const newStock = prod.stock + delta;
-            if (newStock < 0) return;
-            if (CLOUD.active) { cloudAdjustStock(prod, delta); return; }
-            prod.stock = newStock;
-            saveState();
-            renderAdminProductTable();
-            renderProducts();
-            updateDashboardMetrics();
+        async function lmSaveProductRpc(p, over) {
+            const f = Object.assign({
+                id: p.id, name: p.name, category: p.category, price: p.price, cost: p.cost || 0,
+                stock: p.stock, status: p.active === false ? 'hidden' : 'active', image: null
+            }, over || {});
+            const { data, error } = await sb.rpc('seller_save_product', {
+                p_id: f.id || null, p_shop: lmShop.id, p_name: f.name, p_category: f.category,
+                p_price: f.price, p_cost: f.cost, p_stock: f.stock, p_status: f.status, p_image: f.image
+            });
+            if (error) throw error;
+            return data || f.id;
         }
 
-        function toggleProductActive(id) {
+        const stockBusy = new Set();
+        async function quickAdjustStock(id, delta) {
+            const prod = products.find(p => p.id === id);
+            if (!prod || stockBusy.has(id)) return;
+            const newStock = prod.stock + delta;
+            if (newStock < 0) return;
+            stockBusy.add(id);
+            try {
+                await lmSaveProductRpc(prod, { stock: newStock });
+                prod.stock = newStock;
+                if (prod.status === 'out_of_stock' && newStock > 0 && prod.active) prod.status = 'active';
+                if (newStock === 0 && prod.active) prod.status = 'out_of_stock';
+                renderAdminProductTable();
+                renderProducts();
+                updateDashboardMetrics();
+            } catch (err) {
+                showToast('ปรับสต็อกไม่สำเร็จ: ' + lmErr(err.message), 'error');
+            } finally {
+                stockBusy.delete(id);
+            }
+        }
+
+        async function toggleProductActive(id) {
             const prod = products.find(p => p.id === id);
             if (!prod) return;
-            if (CLOUD.active) { cloudToggleActive(prod); return; }
-            prod.active = prod.active === false ? true : false;
-            saveState();
-            renderAdminProductTable();
-            renderProducts();
-            showToast(prod.active ? 'เปิดขายสินค้าแล้ว' : 'ปิดการขายสินค้าแล้ว');
+            const makeActive = prod.active === false;
+            try {
+                await lmSaveProductRpc(prod, { status: makeActive ? 'active' : 'hidden' });
+                await loadCloudProducts();
+                renderAdminProductTable();
+                renderProducts();
+                showToast(makeActive ? 'เปิดขายสินค้าแล้ว' : 'ปิดการขายสินค้าแล้ว');
+            } catch (err) {
+                showToast('เปลี่ยนสถานะไม่สำเร็จ: ' + lmErr(err.message), 'error');
+            }
+        }
+
+        function showProdPreview(url) {
+            const im = document.getElementById('prod-image-preview');
+            const rm = document.getElementById('prod-image-remove');
+            if (url) { im.src = url; im.classList.remove('hidden'); rm.classList.remove('hidden'); }
+            else { im.removeAttribute('src'); im.classList.add('hidden'); rm.classList.add('hidden'); }
+        }
+
+        function onProdImageChosen() {
+            const f = document.getElementById('prod-image-file').files[0];
+            if (f) { showProdPreview(URL.createObjectURL(f)); prodRemoveImage = false; }
+            else showProdPreview(document.getElementById('prod-image').value);
+        }
+
+        function removeProdImage() {
+            document.getElementById('prod-image-file').value = '';
+            document.getElementById('prod-image').value = '';
+            prodRemoveImage = true;
+            showProdPreview('');
         }
 
         function openProductModal(prodId = null) {
             document.getElementById('prod-id').value = prodId || '';
+            document.getElementById('prod-image-file').value = '';
+            prodRemoveImage = false;
             document.getElementById('prod-modal-title').innerText = prodId ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่';
             renderCategoryOptions();
 
@@ -3295,16 +2858,18 @@
                     document.getElementById('prod-stock').value = prod.stock;
                     document.getElementById('prod-lowstock').value = (prod.lowStock !== null && prod.lowStock !== undefined) ? prod.lowStock : '';
                     document.getElementById('prod-image').value = prod.image;
+                    showProdPreview(prod.image);
                     document.getElementById('prod-active').checked = prod.active !== false;
                 }
             } else {
                 document.getElementById('prod-name').value = '';
-                document.getElementById('prod-barcode').value = '885' + Math.floor(100000000 + Math.random() * 900000000);
+                document.getElementById('prod-barcode').value = lmGenEan13();
                 document.getElementById('prod-price').value = '';
                 document.getElementById('prod-cost').value = '';
                 document.getElementById('prod-stock').value = '10';
                 document.getElementById('prod-lowstock').value = '';
                 document.getElementById('prod-image').value = '';
+                showProdPreview('');
                 document.getElementById('prod-active').checked = true;
                 if (categories.length) document.getElementById('prod-category').value = categories[0];
             }
@@ -3316,68 +2881,80 @@
             document.getElementById('product-modal').classList.add('hidden');
         }
 
-        function saveProduct(e) {
+        let savingProduct = false;
+        async function saveProduct(e) {
             e.preventDefault();
+            if (savingProduct) return;
             const id = document.getElementById('prod-id').value;
             const name = document.getElementById('prod-name').value.trim();
             const barcode = document.getElementById('prod-barcode').value.trim();
-            const category = document.getElementById('prod-category').value;
-            const price = parseFloat(document.getElementById('prod-price').value);
+            const category = document.getElementById('prod-category').value || 'Other';
+            const price = Number(document.getElementById('prod-price').value);
             const costRaw = document.getElementById('prod-cost').value;
-            const cost = costRaw === '' ? 0 : parseFloat(costRaw);
-            const stock = parseInt(document.getElementById('prod-stock').value, 10);
+            const cost = costRaw === '' ? 0 : Number(costRaw);
+            const stock = Number(document.getElementById('prod-stock').value);
             const lowStockRaw = document.getElementById('prod-lowstock').value;
             const lowStock = lowStockRaw === '' ? null : parseInt(lowStockRaw, 10);
-            const image = document.getElementById('prod-image').value.trim() || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80';
             const active = document.getElementById('prod-active').checked;
 
-            if (!name || !barcode || isNaN(price) || price < 0 || isNaN(stock) || stock < 0) {
-                showToast('กรุณากรอกข้อมูลสินค้าให้ครบถ้วนและถูกต้อง', 'error');
-                return;
-            }
+            if (!name || !barcode) { showToast('กรุณากรอกชื่อสินค้าและบาร์โค้ดให้ครบ', 'error'); return; }
+            if (!Number.isInteger(price) || price <= 0) { showToast('ราคาขายต้องเป็นจำนวนเต็มและมากกว่า 0', 'error'); return; }
+            if (!Number.isInteger(cost) || cost < 0) { showToast('ต้นทุนต้องเป็นจำนวนเต็มและไม่ติดลบ', 'error'); return; }
+            if (!Number.isInteger(stock) || stock < 0) { showToast('จำนวนสต็อกต้องเป็นจำนวนเต็มและไม่ติดลบ', 'error'); return; }
 
             const duplicateBarcode = products.find(p => p.barcode === barcode && String(p.id) !== String(id));
-            if (duplicateBarcode) {
-                showToast('มีสินค้าอื่นใช้บาร์โค้ด/SKU นี้อยู่แล้ว', 'error');
-                return;
-            }
+            if (duplicateBarcode) { showToast('มีสินค้าอื่นใช้บาร์โค้ด/SKU นี้อยู่แล้ว', 'error'); return; }
+            if (price < cost && !confirm('ราคาขายต่ำกว่าต้นทุน (ขาดทุน) บันทึกต่อหรือไม่?')) return;
 
-            if (CLOUD.active) {
-                const existing = id ? products.find(p => String(p.id) === String(id)) : null;
-                cloudSaveProduct({ uuid: existing ? existing.uuid : null, name, barcode, category, price, cost, stock, lowStock, image, active });
-                return;
-            }
+            savingProduct = true;
+            try {
+                let img = null;
+                const file = document.getElementById('prod-image-file').files[0];
+                if (file) img = await lmUpload(sb, lmUser.id, file);
+                else if (prodRemoveImage) img = '';
 
-            if (id) {
-                const idx = products.findIndex(p => String(p.id) === String(id));
-                if (idx !== -1) products[idx] = { id: products[idx].id, name, barcode, category, price, cost, stock, lowStock, image, active };
-            } else {
-                products.push({ id: Date.now(), name, barcode, category, price, cost, stock, lowStock, image, active });
-            }
+                const pid = await lmSaveProductRpc({ id: id || null, name, category, price, cost, stock, active },
+                    { id: id || null, name, category, price, cost, stock, status: active ? 'active' : 'hidden', image: img });
 
-            saveState();
-            closeProductModal();
-            renderAdminProductTable();
-            renderProducts();
-            updateDashboardMetrics();
-            showToast("บันทึกข้อมูลสินค้าสำเร็จ");
+                const u = await sb.from('products').update({ barcode: barcode }).eq('id', pid);
+                if (u.error) {
+                    const dup = /duplicate|unique/i.test(u.error.message);
+                    showToast(dup ? 'บันทึกสินค้าแล้ว แต่บาร์โค้ดนี้ถูกใช้กับสินค้าอื่นของร้านแล้ว' : 'บันทึกบาร์โค้ดไม่สำเร็จ: ' + u.error.message, 'error');
+                }
+
+                if (lowStock === null || isNaN(lowStock)) delete productMeta[pid]; else productMeta[pid] = { lowStock };
+                saveState();
+                await loadCloudProducts();
+                closeProductModal();
+                renderCategoryOptions();
+                renderCategoryPills();
+                renderAdminProductTable();
+                renderProducts();
+                updateDashboardMetrics();
+                if (!u.error) showToast('บันทึกข้อมูลสินค้าสำเร็จ (ซิงค์กับ LaoMarket แล้ว)');
+            } catch (err) {
+                showToast('บันทึกสินค้าไม่สำเร็จ: ' + lmErr(err.message || String(err)), 'error');
+            } finally {
+                savingProduct = false;
+            }
         }
 
         function editProduct(id) {
             openProductModal(id);
         }
 
-        function deleteProduct(id) {
+        async function deleteProduct(id) {
             const prod = products.find(p => p.id === id);
             if (!prod) return;
-            if (!confirm(`ต้องการลบสินค้า "${prod.name}" ใช่หรือไม่?`)) return;
-            if (CLOUD.active) { cloudDeleteProduct(prod); return; }
+            if (!confirm(`ต้องการลบสินค้า "${prod.name}" ใช่หรือไม่? (สินค้านี้จะหายจากเว็บ LaoMarket ด้วย)`)) return;
+            const { error } = await sb.rpc('seller_delete_product', { p_id: id });
+            if (error) { showToast('ลบไม่สำเร็จ: ' + lmErr(error.message), 'error'); return; }
             products = products.filter(p => p.id !== id);
-            saveState();
+            if (productMeta[id]) { delete productMeta[id]; saveState(); }
             renderAdminProductTable();
             renderProducts();
             updateDashboardMetrics();
-            showToast("ลบรายการสินค้าเรียบร้อยแล้ว");
+            showToast('ลบรายการสินค้าเรียบร้อยแล้ว');
         }
 
         // ------------------------------------------------------------
@@ -3414,7 +2991,7 @@
                     <td class="p-3 font-mono font-bold text-slate-800">${escapeHtml(order.id)}</td>
                     <td class="p-3 text-slate-500">${escapeHtml(order.date)}</td>
                     <td class="p-3 font-semibold">${order.paymentMode === 'CASH' ? '<span class="text-emerald-600"><i class="fa-solid fa-money-bill mr-1"></i> เงินสด</span>' : '<span class="text-sky-600"><i class="fa-solid fa-qrcode mr-1"></i> QR Code</span>'}</td>
-                    <td class="p-3 text-right font-mono font-bold text-slate-800">${storeSettings.currency}${order.total.toFixed(2)}</td>
+                    <td class="p-3 text-right font-mono font-bold text-slate-800">${money(order.total)}</td>
                     <td class="p-3 text-center">${statusBadge}</td>
                     <td class="p-3 text-center space-x-1 whitespace-nowrap">
                         <button onclick="reprintOrder('${escapeAttr(order.id)}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">
@@ -3429,35 +3006,19 @@
             });
         }
 
-        function voidOrder(orderId) {
+        async function voidOrder(orderId) {
             const order = salesHistory.find(o => o.id === orderId);
             if (!order || order.voided) return;
             if (!confirm(`ต้องการยกเลิกบิล ${orderId} และคืนสินค้าเข้าสต็อกหรือไม่?`)) return;
-
-            if (CLOUD.active) { cloudVoidSale(order); return; }
-
-            order.items.forEach(item => {
-                const prod = products.find(p => p.id === item.id);
-                if (prod) prod.stock += item.qty;
-            });
+            const { error } = await sb.rpc('pos_void_sale', { p_sale: order.saleId });
+            if (error) { showToast('ยกเลิกบิลไม่สำเร็จ: ' + lmErr(error.message), 'error'); return; }
             order.voided = true;
-
-            saveState();
+            try { await loadCloudProducts(); } catch (e2) { /* ignore */ }
             renderAdminSalesHistoryTable();
             renderAdminProductTable();
             renderProducts();
             updateDashboardMetrics();
             showToast('ยกเลิกบิลและคืนสต็อกเรียบร้อยแล้ว');
-        }
-
-        function clearSalesHistory() {
-            if (CLOUD.active) { showToast('ໂໝດ Cloud ບໍ່ອະນຸຍາດໃຫ້ລຶບປະຫວັດການຂາຍ (ເກັບເປັນຫຼັກຖານບັນຊີ) — ໃຊ້ "ຍົກເລີກບິນ" ແທນ', 'error'); return; }
-            if (!confirm('ต้องการล้างประวัติการขายทั้งหมดหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
-            salesHistory = [];
-            saveState();
-            renderAdminSalesHistoryTable();
-            updateDashboardMetrics();
-            showToast('ล้างประวัติการขายเรียบร้อยแล้ว');
         }
 
         // ------------------------------------------------------------
@@ -3506,33 +3067,6 @@
         }
 
         // ------------------------------------------------------------
-        // Mock sales history (used only when no saved data exists)
-        // ------------------------------------------------------------
-        function generateMockSalesHistory() {
-            const now = Date.now();
-            const modes = ['CASH', 'QR'];
-            for (let i = 1; i <= 8; i++) {
-                const mode = modes[i % 2];
-                const total = Math.floor(Math.random() * 300) + 50;
-                const vat = total - (total / 1.07);
-                salesHistory.push({
-                    id: 'ORD-DEMO-' + i,
-                    date: `10/09/2026 0${i + 1}:30`,
-                    timestamp: now - (i * 3600000),
-                    items: [{ id: 0, name: 'สินค้าสาธิต ' + i, qty: 1, price: total, cost: total * 0.55 }],
-                    subtotal: total - vat,
-                    vat: vat,
-                    discount: 0,
-                    total: total,
-                    paid: total + 50,
-                    change: 50,
-                    paymentMode: mode,
-                    voided: false
-                });
-            }
-        }
-
-        // ------------------------------------------------------------
         // Dashboard Metrics & Charts
         // ------------------------------------------------------------
         function updateDashboardMetrics() {
@@ -3542,8 +3076,10 @@
             let grossProfit = 0;
             let completedCount = 0;
 
+            const todayKey = new Date().toDateString();
             salesHistory.forEach(s => {
                 if (s.voided) return;
+                if (new Date(s.timestamp).toDateString() !== todayKey) return;
                 completedCount += 1;
                 todayRevenue += s.total;
                 if (s.paymentMode === 'CASH') cashTotal += s.total;
@@ -3565,14 +3101,14 @@
             const revEl = document.getElementById('stat-today-revenue');
             if (!revEl) return;
 
-            revEl.innerText = `${storeSettings.currency}${todayRevenue.toFixed(2)}`;
+            revEl.innerText = `${money(todayRevenue)}`;
             document.getElementById('stat-today-orders').innerText = `${completedCount} บิล`;
-            document.getElementById('stat-avg-order').innerText = `${storeSettings.currency}${avgOrder.toFixed(2)}`;
+            document.getElementById('stat-avg-order').innerText = `${money(avgOrder)}`;
             document.getElementById('stat-low-stock-count').innerText = `${lowStockCount} รายการ`;
-            document.getElementById('stat-profit-estimate').innerText = `${storeSettings.currency}${grossProfit.toFixed(2)}`;
+            document.getElementById('stat-profit-estimate').innerText = `${money(grossProfit)}`;
 
-            document.getElementById('pay-cash-total').innerText = `${storeSettings.currency}${cashTotal.toFixed(0)}`;
-            document.getElementById('pay-qr-total').innerText = `${storeSettings.currency}${qrTotal.toFixed(0)}`;
+            document.getElementById('pay-cash-total').innerText = `${money(cashTotal)}`;
+            document.getElementById('pay-qr-total').innerText = `${money(qrTotal)}`;
 
             if (chartsInitialized) updateCharts(cashTotal, qrTotal);
         }
@@ -3606,7 +3142,7 @@
                 data: {
                     labels: trend.days,
                     datasets: [{
-                        label: 'ยอดขาย (บาท)',
+                        label: 'ยอดขาย (กีบ)',
                         data: trend.totals,
                         backgroundColor: '#0284c7',
                         borderRadius: 8

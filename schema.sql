@@ -1,56 +1,37 @@
--- =====================================================================
--- v12: SmartPOS Pro cloud data (run AFTER the existing schema.sql; safe to re-run)
---   Products, costs, stock and POS sales already live in the LaoMarket tables
---   (products, product_costs, pos_sales, pos_sale_items). This adds one small
---   per-shop key/value table for the rest of SmartPOS Pro's data:
---     settings, currencies, members (wallets), categories, product_meta,
---     admin_security (hash of the POS admin-page password)
--- =====================================================================
-create table if not exists public.shop_pos_data (
-  shop_id uuid not null references public.shops(id) on delete cascade,
-  key text not null check (key in ('settings','currencies','members','categories','product_meta','admin_security')),
-  value jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now(),
-  primary key (shop_id, key),
-  check (pg_column_size(value) < 500000)
+-- LaoMarket: ເຊື່ອມລະບົບການເງິນ (ແອັດມິນຄວບຄຸມ). ຣັນຊ້ຳໄດ້.
+-- ໝາຍເຫດ: ສົມມຸດວ່າ profiles.role = 'admin' ສຳລັບແອັດມິນ (ຕາມ admin.html ເດີມ)
+create table if not exists public.shop_payout_settings(
+  shop_id uuid primary key references public.shops(id) on delete cascade,
+  bank text not null default ''
 );
+alter table public.shop_payout_settings enable row level security;
+drop policy if exists "owner bank" on public.shop_payout_settings;
+create policy "owner bank" on public.shop_payout_settings for all
+  using (exists(select 1 from public.shops s where s.id=shop_id and s.owner_id=auth.uid()))
+  with check (exists(select 1 from public.shops s where s.id=shop_id and s.owner_id=auth.uid()));
+drop policy if exists "admin read bank" on public.shop_payout_settings;
+create policy "admin read bank" on public.shop_payout_settings for select
+  using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
 
-alter table public.shop_pos_data enable row level security;
+-- ຄຳຂໍຖອນເງິນ (ຕາຕະລາງ payout_requests ທີ່ admin ໃຊ້ຢູ່ແລ້ວ)
+drop policy if exists "owner request payout" on public.payout_requests;
+create policy "owner request payout" on public.payout_requests for insert
+  with check (status='pending' and exists(select 1 from public.shops s where s.id=shop_id and s.owner_id=auth.uid()));
+drop policy if exists "owner view payouts" on public.payout_requests;
+create policy "owner view payouts" on public.payout_requests for select
+  using (exists(select 1 from public.shops s where s.id=shop_id and s.owner_id=auth.uid()));
+drop policy if exists "admin manage payouts" on public.payout_requests;
+create policy "admin manage payouts" on public.payout_requests for all
+  using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'))
+  with check (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
 
--- the approved shop owner can read / create / change their own shop's POS data
-drop policy if exists "owner read pos data" on public.shop_pos_data;
-create policy "owner read pos data" on public.shop_pos_data for select
-  using (public.owns_approved_shop(shop_id) or public.is_admin());
+-- ແອັດມິນຈ່າຍຄ່າຄອມ Affiliate
+drop policy if exists "admin manage commissions" on public.affiliate_commissions;
+create policy "admin manage commissions" on public.affiliate_commissions for all
+  using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'))
+  with check (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
 
-drop policy if exists "owner insert pos data" on public.shop_pos_data;
-create policy "owner insert pos data" on public.shop_pos_data for insert
-  with check (public.owns_approved_shop(shop_id));
-
-drop policy if exists "owner update pos data" on public.shop_pos_data;
-create policy "owner update pos data" on public.shop_pos_data for update
-  using (public.owns_approved_shop(shop_id)) with check (public.owns_approved_shop(shop_id));
-
--- LaoMarket main admin can manage everything (needed to reset a forgotten POS admin password)
-drop policy if exists "admin manage pos data" on public.shop_pos_data;
-create policy "admin manage pos data" on public.shop_pos_data for all
-  using (public.is_admin()) with check (public.is_admin());
-
--- For a future admin.html button: reset a shop's POS admin password
-create or replace function public.admin_reset_pos_admin_password(p_shop uuid)
-returns void language plpgsql security definer set search_path = public as $$
-begin
-  if not public.is_admin() then raise exception 'forbidden'; end if;
-  delete from shop_pos_data where shop_id = p_shop and key = 'admin_security';
-end; $$;
-revoke all on function public.admin_reset_pos_admin_password(uuid) from public, anon;
-grant execute on function public.admin_reset_pos_admin_password(uuid) to authenticated;
-
--- ---------------------------------------------------------------------
--- HOW THE LAOMARKET MAIN ADMIN RESETS A FORGOTTEN POS ADMIN PASSWORD
--- (the shop gives you the "ລະຫັດຮ້ານ / shop id" shown on the forgot-password screen):
---
---   delete from public.shop_pos_data
---   where shop_id = 'PUT-SHOP-ID-HERE' and key = 'admin_security';
---
--- The shop owner then presses "ກວດສອບການຣີເຊັດ" and sets a new password.
--- ---------------------------------------------------------------------
+-- ຄ່າເລີ່ມຕົ້ນ (ແກ້ໄດ້ໃນ admin)
+insert into public.platform_settings(key,value) values
+ ('payout_schedule','weekly'),('payout_weekday','1'),('payout_min_lak','100000')
+on conflict (key) do nothing;

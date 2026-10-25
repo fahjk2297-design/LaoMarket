@@ -443,4 +443,48 @@ window.editProduct=id=>{const p=db.products.find(x=>x.id===id);if(p)pmOpen(p)};
 guard();
 })();
 </script>
+<script>
+(function(){
+const $=id=>document.getElementById(id),Q=s=>document.querySelector(s);
+const btn=document.createElement('button');btn.className='navbtn';btn.dataset.page='finance';btn.textContent='🏦　ศูนย์การเงิน (Escrow)';
+Q('.navbtn[data-page="payouts"]').before(btn);
+const sec=document.createElement('section');sec.className='page';sec.id='page-finance';Q('.content').appendChild(sec);
+btn.onclick=()=>{document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active',b===btn));document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p===sec));$('pageTitle').textContent='ศูนย์การเงิน (Escrow)';load()};
+const DAYS=['ອາທິດ','ຈັນ','ອັງຄານ','ພຸດ','ພະຫັດ','ສຸກ','ເສົາ'],DEAD=['rejected','cancelled','void'];
+const mask=b=>{b=String(b||'');return b.length>4?'••••'+b.slice(-4)+' ('+b.split(/[\/,]/)[0].trim().slice(0,20)+')':b};
+let L=null;
+async function load(){
+ sec.innerHTML='<div class="panel">ກຳລັງຄິດໄລ່...</div>';
+ const [st,sh,cm,po,bk]=await Promise.all([sb.from('platform_settings').select('key,value'),sb.from('shops').select('id,name').eq('status','approved'),sb.from('affiliate_commissions').select('*'),sb.from('payout_requests').select('*'),sb.from('shop_payout_settings').select('shop_id,bank')]);
+ const S={};(st.data||[]).forEach(r=>S[r.key]=r.value);
+ const cfg={fee:Number(S.platform_fee_percent??3),comm:Number(S.affiliate_commission_percent??5),sch:S.payout_schedule||'weekly',wd:Number(S.payout_weekday??1),min:Number(S.payout_min_lak??100000)};
+ const shops=sh.data||[],bank=Object.fromEntries((bk.data||[]).map(x=>[x.shop_id,x.bank])),P=po.data||[],C=(cm.data||[]).map(c=>({...c,amt:Number(c.amount_lak??c.commission_lak??0)}));
+ const cmap={};C.filter(c=>!DEAD.includes(String(c.status).toLowerCase())).forEach(c=>cmap[String(c.order_id)]=(cmap[String(c.order_id)]||0)+c.amt);
+ const led=await Promise.all(shops.map(async s=>{
+  const r=await sb.rpc('seller_orders',{p_shop:s.id});if(r.error)return{s,err:r.error.message};
+  const rows=(r.data||[]).filter(o=>o.payment_method!=='cash_on_delivery'&&o.payment_status==='confirmed'&&o.fulfillment!=='cancelled').map(o=>{const g=Number(o.shop_total),fe=Math.round(g*cfg.fee/100),c=Math.min(g-fe,cmap[String(o.order_number)]||cmap[String(o.id)]||0);return{g,fe,c,n:g-fe-c,done:o.fulfillment==='delivered'}});
+  const sum=(l,k)=>l.reduce((a,x)=>a+x[k],0),dn=rows.filter(x=>x.done),took=P.filter(p=>p.shop_id===s.id&&p.status!=='rejected').reduce((a,p)=>a+Number(p.amount_lak),0);
+  return{s,gross:sum(rows,'g'),fee:sum(rows,'fe'),com:sum(rows,'c'),net:sum(dn,'n'),held:sum(rows.filter(x=>!x.done),'n'),took,avail:Math.max(0,sum(dn,'n')-took),bank:bank[s.id]||''}}));
+ const aff={};C.filter(c=>['approved','completed'].includes(String(c.status).toLowerCase())).forEach(c=>aff[c.affiliate_id]=(aff[c.affiliate_id]||0)+c.amt);
+ L={cfg,led,aff};render();
+}
+function render(){
+ const {cfg,led,aff}=L,T=k=>led.reduce((a,x)=>a+(x[k]||0),0),ok=x=>!x.err&&x.avail>=cfg.min&&x.bank;
+ const nx=cfg.sch==='monthly'?'ວັນທີ 1 ຂອງທຸກເດືອນ':(cfg.sch==='biweekly'?'ທຸກ 2 ອາທິດ · ':'ທຸກອາທິດ · ')+'ວັນ'+DAYS[cfg.wd];
+ sec.innerHTML=`<div class="cards"><div class="stat"><div class="label">ເງິນທີ່ລະບົບຖືໄວ້ (ສຸດທິຮ້ານ)</div><div class="value">${money(T('net')+T('held'))}</div></div><div class="stat"><div class="label">ລາຍຮັບແພລດຟອມ (${cfg.fee}%)</div><div class="value">${money(T('fee'))}</div></div><div class="stat"><div class="label">ຄ່າຄອມທີ່ຫັກ</div><div class="value">${money(T('com'))}</div></div><div class="stat"><div class="label">ຕ້ອງໂອນຮ້ານຕອນນີ້</div><div class="value">${money(led.filter(ok).reduce((a,x)=>a+x.avail,0))}</div></div></div>
+ <div class="grid2"><div class="panel"><h2>⚙ ກົດການໂອນເງິນ (ແອັດມິນກຳນົດ)</h2><div class="field"><label>ຮອບໂອນ</label><select id="fs1">${[['weekly','ທຸກອາທິດ'],['biweekly','ທຸກ 2 ອາທິດ'],['monthly','ທຸກເດືອນ']].map(o=>`<option value="${o[0]}" ${o[0]===cfg.sch?'selected':''}>${o[1]}</option>`).join('')}</select></div><div class="field"><label>ວັນທີ່ໂອນ</label><select id="fs2">${DAYS.map((d,i)=>`<option value="${i}" ${i===cfg.wd?'selected':''}>${d}</option>`).join('')}</select></div><div class="field"><label>ຍອດຂັ້ນຕ່ຳຕໍ່ຮອບ (ກີບ)</label><input id="fs3" type="number" value="${cfg.min}"></div><p class="muted">ຄ່າທຳນຽມ ${cfg.fee}% ແລະ ຄ່າຄອມ ${cfg.comm}% ແກ້ໄຂໃນໜ້າ "ຕັ້ງຄ່າລະບົບ". ຮອບໂອນ: ${nx}</p><button class="primary" id="fsave">ບັນທຶກກົດ</button></div>
+ <div class="panel"><h2>💸 ສ້າງຮອບໂອນ</h2><p class="muted">ສ້າງຄຳຂໍໂອນໃຫ້ທຸກຮ້ານທີ່ຍອດເຖິງຂັ້ນຕ່ຳ ແລະ ມີບັນຊີ. ຈາກນັ້ນໄປໜ້າ "ຖອນເງິນຮ້ານຄ້າ" ເພື່ອໂອນຈິງ ແລ້ວກົດ "ຈ່າຍແລ້ວ".</p><button class="primary" id="frun" ${led.some(ok)?'':'disabled'}>ສ້າງຄຳຂໍໂອນທັງໝົດ (${led.filter(ok).length} ຮ້ານ)</button></div></div>
+ <div class="panel"><h2>ບັນຊີເງິນຮ້ານຄ້າ (Ledger)</h2><div class="tablewrap"><table><thead><tr><th>ຮ້ານ</th><th>ຍອດຂາຍ</th><th>ຄ່າທຳນຽມ</th><th>ຄ່າຄອມ</th><th>ສຸດທິ (ສົ່ງແລ້ວ)</th><th>ກັກໄວ້</th><th>ຂໍ/ໂອນແລ້ວ</th><th>ພ້ອມໂອນ</th><th></th></tr></thead><tbody>${led.map((x,i)=>x.err?`<tr><td>${esc(x.s.name)}</td><td colspan="8" class="muted">ອ່ານບໍ່ໄດ້: ${esc(x.err)}</td></tr>`:`<tr><td>${esc(x.s.name)}<div class="muted">${esc(mask(x.bank))||'ຍັງບໍ່ມີບັນຊີ'}</div></td><td class="money">${money(x.gross)}</td><td class="money">${money(x.fee)}</td><td class="money">${money(x.com)}</td><td class="money">${money(x.net)}</td><td class="money">${money(x.held)}</td><td class="money">${money(x.took)}</td><td class="money"><b>${money(x.avail)}</b></td><td><button class="primary" data-one="${i}" ${ok(x)?'':'disabled'}>ໂອນ</button></td></tr>`).join('')||'<tr><td colspan="9" class="empty">ບໍ່ມີຮ້ານ</td></tr>'}</tbody></table></div></div>
+ <div class="panel"><h2>🔗 ຄ່າຄອມ Affiliate ພ້ອມຈ່າຍ</h2><div class="tablewrap"><table><thead><tr><th>Affiliate</th><th>ຍອດພ້ອມຈ່າຍ</th><th></th></tr></thead><tbody>${Object.entries(aff).map(([id,a])=>{const f=(db.affiliates||[]).find(x=>x.id===id)||{};return`<tr><td>${esc(f.name||'')} <span class="muted">${esc(f.code||id)}</span></td><td class="money">${money(a)}</td><td><button class="primary" data-aff="${esc(id)}">ຈ່າຍແລ້ວ</button></td></tr>`}).join('')||'<tr><td colspan="3" class="empty">ບໍ່ມີຍອດຄ້າງຈ່າຍ (ຕ້ອງອະນຸມັດຄ່າຄອມກ່ອນ)</td></tr>'}</tbody></table></div></div>`;
+}
+async function mk(x){return sb.from('payout_requests').insert({shop_id:x.s.id,amount_lak:x.avail,payout_account_masked:mask(x.bank),status:'pending'})}
+sec.addEventListener('click',async e=>{
+ const t=e.target.closest('button');if(!t)return;
+ if(t.id==='fsave'){const now=new Date().toISOString(),u=(window.me&&me.id)||null,r=await sb.from('platform_settings').upsert([['payout_schedule',$('fs1').value],['payout_weekday',+$('fs2').value],['payout_min_lak',+$('fs3').value||0]].map(([key,value])=>({key,value,updated_by:u,updated_at:now})));r.error?alert(r.error.message):(toast('ບັນທຶກແລ້ວ'),load())}
+ else if(t.id==='frun'){if(!confirm('ສ້າງຄຳຂໍໂອນໃຫ້ທຸກຮ້ານທີ່ພ້ອມ?'))return;t.disabled=true;let n=0;for(const x of L.led.filter(x=>!x.err&&x.avail>=L.cfg.min&&x.bank)){const r=await mk(x);if(r.error){alert(x.s.name+': '+r.error.message);break}n++}toast('ສ້າງ '+n+' ຄຳຂໍ');await loadLive();load()}
+ else if(t.dataset.one!==undefined){const x=L.led[+t.dataset.one];if(!confirm('ໂອນ '+money(x.avail)+' ໃຫ້ '+x.s.name+'?'))return;const r=await mk(x);r.error?alert(r.error.message):(toast('ສ້າງຄຳຂໍແລ້ວ'),await loadLive(),load())}
+ else if(t.dataset.aff){if(!confirm('ຢືນຢັນວ່າຈ່າຍຄ່າຄອມແລ້ວ?'))return;const r=await sb.from('affiliate_commissions').update({status:'paid',paid_at:new Date().toISOString()}).eq('affiliate_id',t.dataset.aff).in('status',['approved','completed']);r.error?alert(r.error.message):(toast('ບັນທຶກຈ່າຍແລ້ວ'),await loadLive(),load())}
+});
+})();
+</script>
 </body></html>

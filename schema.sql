@@ -32,6 +32,9 @@ create policy "admin manage commissions" on public.affiliate_commissions for all
   with check (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='admin'));
 
 -- ຄ່າເລີ່ມຕົ້ນ (ແກ້ໄດ້ໃນ admin)
+-- ໝາຍເຫດ: ຄໍລຳ value ເປັນ jsonb ຈຶ່ງຕ້ອງແປງເປັນ json ກ່ອນ
 insert into public.platform_settings(key,value) values
- ('payout_schedule','weekly'),('payout_weekday','1'),('payout_min_lak','100000')
+ ('payout_schedule',to_jsonb('weekly'::text)),
+ ('payout_weekday',to_jsonb(1)),
+ ('payout_min_lak',to_jsonb(100000))
 on conflict (key) do nothing;

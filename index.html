@@ -1185,9 +1185,9 @@ async function lmUpload(sb,uid,file){
    currentAffiliate=pr.data;
    const url=new URL(location.href);url.hash='';url.search='';url.searchParams.set('ref',pr.data.referral_code||'');
    $('affDashLink').value=url.toString();$('affDashCode').textContent='ລະຫັດ: '+(pr.data.referral_code||'—')+' · ສະຖານະບັນຊີ: '+(pr.data.status||'pending');
-   const cr=await sb.from('affiliate_commissions').select('id,order_id,order_total_lak,commission_lak,status,paid_at,created_at').eq('affiliate_id',pr.data.id).order('created_at',{ascending:false}).limit(500);
+   const cr=await sb.from('affiliate_commissions').select('*').eq('affiliate_id',pr.data.id).order('created_at',{ascending:false}).limit(500);
    if(cr.error){notice.hidden=false;notice.textContent='Dashboard ໄດ້ສ້າງແລ້ວ ແຕ່ຍັງອ່ານຕາຕະລາງ affiliate_commissions ບໍ່ໄດ້. ກະລຸນາຮັນໄຟລ໌ SQL ຕັ້ງຄ່າທີ່ແນບມາ ແລະ ຕັ້ງຄ່າ RLS. ລາຍລະອຽດ: '+cr.error.message;return;}
-   const rows=cr.data||[];
+   const rows=(cr.data||[]).map(r=>({...r,commission_lak:r.commission_lak??r.amount_lak}));
    const completed=rows.filter(r=>['approved','paid','completed'].includes(String(r.status||'').toLowerCase()));
    const pending=rows.filter(r=>['pending','pending_approval','review'].includes(String(r.status||'').toLowerCase()));
    const paid=rows.filter(r=>String(r.status||'').toLowerCase()==='paid');
@@ -1203,4 +1203,301 @@ async function lmUpload(sb,uid,file){
  window.copyAffiliateLink=function(){const el=$('affDashLink');if(!el||!el.value)return;el.select();if(navigator.clipboard)navigator.clipboard.writeText(el.value).then(()=>toast('ຄັດລອກລິ້ງ Affiliate ແລ້ວ')).catch(()=>{document.execCommand('copy');toast('ຄັດລອກລິ້ງແລ້ວ')});else{document.execCommand('copy');toast('ຄັດລອກລິ້ງແລ້ວ')}};
 })();
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="lm-theme">
+:root{--g:#0a7a5a;--dark:#053b2e;--bg:#eef5f1;--line:#dbe7e0;--gold:#f59e0b;--ink:#10231b}
+body{font-family:'Noto Sans Lao',system-ui,sans-serif;background:var(--bg)}
+.top{background:linear-gradient(90deg,#053b2e,#0a7a5a)}
+header{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);box-shadow:0 2px 14px rgba(5,59,46,.07)}
+.hero-box{background:radial-gradient(circle at 85% 20%,#f59e0b44,transparent 40%),linear-gradient(120deg,#053b2e,#0a9468);box-shadow:0 18px 40px rgba(5,59,46,.22)}
+.primary,.search button{background:linear-gradient(135deg,#0a8a65,#066b4f);border-color:#066b4f;color:#fff}
+button{transition:.15s}button:hover{filter:brightness(.97)}
+.product,.cat,.feature{transition:.18s}.product:hover,.cat:hover,.feature:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(5,59,46,.12);border-color:#9fd3bd}
+#lmWorkBtn{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:0;font-weight:700;border-radius:10px;padding:9px 14px}
+/* ===== Seller workspace (landing after login) ===== */
+#mystore{padding:0!important;align-items:stretch!important;background:#eef5f1!important}
+#mystore .modal{width:100%!important;max-width:none!important;max-height:none!important;height:100vh;border-radius:0;padding:0!important;display:flex;overflow:hidden;background:transparent}
+#lmSide{width:276px;flex:none;display:flex;flex-direction:column;background:linear-gradient(180deg,#053b2e,#022c22);color:#fff;padding:18px 14px;overflow:auto}
+.lm-brand{font-size:24px;font-weight:800;padding:2px 8px}.lm-brand span{color:var(--gold)}.lm-brand small{display:block;font-size:12px;font-weight:400;color:#9fd3bd;margin-top:2px}
+.lm-shop{margin:14px 4px;padding:10px 12px;border-radius:12px;background:#ffffff14;font-size:14px}
+#lmNav{flex:1}
+#mystore #lmSide .mstabs{position:static!important;display:flex!important;flex-direction:column;gap:5px;max-height:none;width:auto;padding:0;border:0;background:none;box-shadow:none;margin:0}
+#lmSide .mstabs button{position:relative;background:transparent;border:1px solid transparent;color:#e3f5ec;padding:10px 12px;border-radius:12px;font-size:14px}
+#lmSide .mstabs button small{color:#8fc7b0;font-size:11px;line-height:1.35}
+#lmSide .mstabs button:hover{background:#ffffff14}
+#lmSide .mstabs button.active{background:linear-gradient(135deg,#10b981,#0a7a5a);color:#fff;border-color:#34d3a0;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+#lmSide .mstabs button.active small{color:#d4f7e8}
+#ms-t-orders,#ms-t-ext{border-color:#ffffff22!important}
+.lm-badge{position:absolute;right:10px;top:10px;background:var(--gold);color:#3b2400;font-size:11px;font-weight:800;border-radius:99px;padding:1px 8px}
+.lm-foot{display:grid;gap:6px;margin-top:12px}.lm-foot button{background:#ffffff14;border:0;color:#fff;text-align:left;padding:10px 12px}
+#lmMain{flex:1;min-width:0;overflow:auto;padding:20px 28px 40px}
+#lmMain .mhead{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 16px;margin-bottom:14px;box-shadow:0 4px 14px rgba(5,59,46,.06)}
+#lmBurger{display:none;margin-right:8px;background:#053b2e;color:#fff;border:0}
+#mystore #ms-main{display:block!important}#mystore .msbar,#mystore #ms-shopline{display:none!important}
+#mystore #ms-main>[id^=ms-tab-]:not([hidden]){background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 4px 14px rgba(5,59,46,.05)}
+.trc{border:1px solid var(--line);border-left:5px solid var(--g);border-radius:14px;padding:14px;margin:10px 0;background:#fff}
+.trb{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:#eef2ff;color:#2b4acb}.trb.ok{background:#dcf5e8;color:#066b4f}.trb.warn{background:#fff1d6;color:#9a5b00}.trb.bad{background:#fde4e2;color:#c0322c}
+.lm-nt{margin-top:6px;background:#25d366;color:#fff;border:0;font-weight:700}
+@media(max-width:899px){#lmSide{position:fixed;left:0;top:0;bottom:0;z-index:5;transform:translateX(-105%);transition:.25s}#lmSide.show{transform:none;box-shadow:0 0 0 100vmax #0007}#lmBurger{display:inline-flex}#lmMain{padding:12px}}
+/* ===== external orders ===== */
+.x-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.x-top button.on{background:var(--g);color:#fff}
+.x-warn{background:#fff5dc;color:#7a5200;border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px}
+.x-form{background:#f4faf7;border:1px dashed #86c9ae;border-radius:14px;padding:14px;margin-bottom:14px}
+.x-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}.x-form label{font-size:13px;font-weight:700;display:block;margin:6px 0 3px}.x-form input,.x-form select,.x-form textarea{width:100%;padding:9px;border:1px solid #c5d8ce;border-radius:9px;background:#fff}
+.x-row{display:grid;grid-template-columns:2fr .7fr 1fr auto;gap:6px;margin:5px 0}
+.x-src{background:#e6f4ee;color:#066b4f;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700}
+.x-steps{display:flex;gap:4px;margin:10px 0}.x-steps div{flex:1;text-align:center;font-size:11px;padding:6px 2px;border-radius:8px;background:#edf1ef;color:#7a8a82}.x-steps .on{background:#10b981;color:#fff}.x-steps .cur{background:var(--gold);color:#3b2400;font-weight:800}
+.x-act{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}.x-act input{padding:8px;border:1px solid #c5d8ce;border-radius:9px;min-width:130px}
+.x-act .wa{background:#25d366;color:#fff;border:0}
+.x-bill{max-height:90px;border-radius:8px;border:1px solid var(--line)}
+@media(max-width:600px){.x-g{grid-template-columns:1fr}.x-row{grid-template-columns:1fr 1fr}}
+</style>
+<script>
+(function(){
+const sb=window.laoMarketSupabase,$=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('en-US')+' ₭';
+const tst=m=>{try{toast(m)}catch(e){alert(m)}};
+const modal=document.querySelector('#mystore .modal'),tabs=$('ms-tabs');
+if(!sb||!modal||!tabs)return;
+const shopName=()=>{const s=window.msGetShop&&window.msGetShop();return s?s.name:'LaoMarket'};
+/* ---------- 1. Build left workspace shell ---------- */
+modal.removeAttribute('style');
+const side=document.createElement('aside');side.id='lmSide';
+side.innerHTML='<div class="lm-brand">Lao<span>Market</span><small>ສູນຈັດການຮ້ານ & ອໍເດີ</small></div><div class="lm-shop" id="lmShop"></div><div id="lmNav"></div><div class="lm-foot"><button type="button" id="lmStore">🛍️ ໄປໜ້າຮ້ານຄ້າ</button><button type="button" id="lmOut">↩ ອອກຈາກລະບົບ</button></div>';
+const main=document.createElement('div');main.id='lmMain';
+[...modal.children].forEach(c=>{if(c.tagName!=='STYLE')main.appendChild(c)});
+modal.append(side,main);$('lmNav').appendChild(tabs);
+tabs.hidden=false;new MutationObserver(()=>{if(tabs.hidden)tabs.hidden=false}).observe(tabs,{attributes:true,attributeFilter:['hidden']});
+new MutationObserver(()=>{$('lmShop').innerHTML=$('ms-shopline').innerHTML}).observe($('ms-shopline'),{childList:true,subtree:true});
+const mh=main.querySelector('.mhead');const bg=document.createElement('button');bg.type='button';bg.id='lmBurger';bg.textContent='☰';mh.prepend(bg);
+const drawer=v=>side.classList.toggle('show',v);
+bg.onclick=()=>drawer(!side.classList.contains('show'));
+$('lmStore').onclick=()=>{drawer(false);closeM('mystore')};
+$('lmOut').onclick=()=>{closeM('mystore');$('logoutBtn').click()};
+/* new nav item + panel */
+$('ms-t-orders').insertAdjacentHTML('afterend','<button type="button" id="ms-t-ext" data-xtab="ext">📥 ອໍເດີຈາກບ່ອນອື່ນ<small>Facebook, WhatsApp, TikTok, ໂທລະສັບ — ຈັດສົ່ງ ແລະ ແຈ້ງສະຖານະ</small></button>');
+const ext$=document.createElement('div');ext$.id='ms-tab-ext';ext$.hidden=true;$('ms-main').appendChild(ext$);
+const hideExt=()=>{ext$.hidden=true;$('ms-t-ext').classList.remove('active')};
+tabs.addEventListener('click',e=>{
+ const x=e.target.closest('[data-xtab]');
+ if(x){document.querySelectorAll('#ms-main [id^=ms-tab-]').forEach(p=>{if(p!==ext$)p.hidden=true});
+  tabs.querySelectorAll('button').forEach(b=>b.classList.remove('active'));x.classList.add('active');
+  $('ms-cur').textContent='ອໍເດີຈາກບ່ອນອື່ນ';ext$.hidden=false;xrender();drawer(false);return}
+ if(e.target.closest('[data-tab],[data-spos]')){hideExt();drawer(false)}
+},true);
+window.addEventListener('ms-ready',()=>{hideExt();badges()});
+/* ---------- 2. Landing after login + header button ---------- */
+const wb=document.createElement('button');wb.type='button';wb.id='lmWorkBtn';wb.hidden=true;wb.textContent='🧾 ສູນຈັດການຮ້ານ';wb.onclick=()=>openMyStore('orders');
+const tb=$('trackBtn');if(tb)tb.after(wb);
+const sc=$('sellerCard');if(sc){const f=()=>{wb.hidden=sc.hidden};f();new MutationObserver(f).observe(sc,{attributes:true,attributeFilter:['hidden']})}
+async function landing(s){
+ if(!s||sessionStorage.lmLand===s.user.id)return;
+ const r=await sb.from('shops').select('id').eq('owner_id',s.user.id).eq('status','approved').limit(1);
+ if(r.data&&r.data.length){sessionStorage.lmLand=s.user.id;closeM('login');window.openMyStore('orders')}
+}
+sb.auth.getSession().then(r=>landing(r.data.session));
+sb.auth.onAuthStateChange((ev,s)=>{if(ev==='SIGNED_OUT')sessionStorage.removeItem('lmLand');else if(s&&ev==='SIGNED_IN')setTimeout(()=>landing(s),400)});
+/* ---------- 3. Regular orders: notify customer button ---------- */
+const waNum=p=>{let d=String(p||'').replace(/[^\d]/g,'');if(d.startsWith('856'))return d;return '856'+d.replace(/^0+/,'')};
+const waUrl=(p,t)=>'https://wa.me/'+waNum(p)+'?text='+encodeURIComponent(t);
+new MutationObserver(()=>{document.querySelectorAll('#ms-tab-orders [data-card]').forEach(d=>{
+ if(d.querySelector('.lm-nt'))return;const c=d.closest('.trc'),a=c&&c.querySelector('a[href^="tel:"]');if(!a)return;
+ const info=[...c.querySelectorAll('.muted')].find(x=>x.innerText.includes('🚚')),m=info&&info.innerText.match(/🚚\s*([^\n]+)/),st=(c.querySelector('.trh .trb')||{}).textContent||'';
+ const b=document.createElement('button');b.type='button';b.className='lm-nt';b.textContent='💬 ແຈ້ງສະຖານະລູກຄ້າ (WhatsApp)';
+ b.onclick=()=>window.open(waUrl(a.textContent,`ສະບາຍດີ 🙏 ອໍເດີ ${d.dataset.card} ຈາກຮ້ານ ${shopName()}\nສະຖານະ: ${st}${m?'\n🚚 ການຈັດສົ່ງ: '+m[1]:''}\nຂອບໃຈທີ່ອຸດໜູນ ❤️`),'_blank');
+ d.appendChild(b)})}).observe($('ms-tab-orders'),{childList:true});
+/* ---------- 4. External orders ---------- */
+const SRC={facebook:'📘 Facebook',whatsapp:'💬 WhatsApp',tiktok:'🎵 TikTok',instagram:'📸 Instagram',line:'🟢 LINE',phone:'📞 ໂທລະສັບ',walk:'🏬 ໜ້າຮ້ານ',other:'🔖 ອື່ນໆ'};
+const STP=[['new','ໃໝ່'],['confirmed','ຢືນຢັນ'],['packing','ແພັກ'],['shipped','ກຳລັງສົ່ງ'],['delivered','ສຳເລັດ']],SL=Object.fromEntries(STP.concat([['cancelled','ຍົກເລີກ']]));
+let ext=[],useDb=true,flt='todo',showForm=false,plist=[];
+const sid=()=>window.msGetShop().id,LK=()=>'lm_ext_'+sid();
+const tot=o=>o.items.reduce((a,i)=>a+i.q*i.p,0)+Number(o.ship_fee||0);
+async function xload(){
+ if(useDb){const r=await sb.from('external_orders').select('id,data,created_at').eq('shop_id',sid()).order('created_at',{ascending:false});
+  if(!r.error){ext=r.data.map(x=>({...x.data,id:x.id,created_at:x.created_at}));return}useDb=false}
+ try{ext=JSON.parse(localStorage.getItem(LK())||'[]')}catch(e){ext=[]}
+}
+async function xsave(o){
+ if(useDb){const row={shop_id:sid(),order_no:o.no,status:o.status,data:o};
+  const r=o.id&&!String(o.id).startsWith('L')?await sb.from('external_orders').update(row).eq('id',o.id):await sb.from('external_orders').insert(row);
+  if(!r.error){await xload();return}useDb=false}
+ if(!o.id){o.id='L'+Date.now();o.created_at=new Date().toISOString();ext.unshift(o)}
+ localStorage.setItem(LK(),JSON.stringify(ext));
+}
+async function xdel(o){if(useDb&&!String(o.id).startsWith('L')){await sb.from('external_orders').delete().eq('id',o.id);await xload()}else{ext=ext.filter(x=>x!==o);localStorage.setItem(LK(),JSON.stringify(ext))}}
+async function badges(){
+ let n1=0,n2=0;try{const r=await sb.rpc('seller_orders',{p_shop:sid()});n1=(r.data||[]).filter(o=>['pending','confirmed'].includes(o.fulfillment)).length}catch(e){}
+ try{await xload();n2=ext.filter(o=>['new','confirmed','packing'].includes(o.status)).length}catch(e){}
+ [['ms-t-orders',n1],['ms-t-ext',n2]].forEach(([id,n])=>{const b=$(id);if(!b)return;let s=b.querySelector('.lm-badge');if(!n){if(s)s.remove();return}if(!s){s=document.createElement('span');s.className='lm-badge';b.appendChild(s)}s.textContent=n})
+}
+const msgFor=o=>{const h=`ສະບາຍດີ ${o.name} 🙏\nອໍເດີ ${o.no} ຈາກຮ້ານ ${shopName()}\n`;
+ const t={new:`ໄດ້ຮັບອໍເດີຂອງທ່ານແລ້ວ ຍອດລວມ ${fmt(tot(o))}`,confirmed:'ຢືນຢັນອໍເດີແລ້ວ ກຳລັງກະກຽມສິນຄ້າ',packing:'ກຳລັງແພັກສິນຄ້າ ຈະສົ່ງອອກໃຫ້ໄວໆນີ້',
+ shipped:`ສົ່ງສິນຄ້າແລ້ວ 🚚\nຂົນສົ່ງ: ${o.carrier||'-'}\nເລກພັດສະດຸ: ${o.tracking||'-'}${o.cod?'\nເກັບເງິນປາຍທາງ: '+fmt(tot(o)):''}\nແນບບິນຂົນສົ່ງມາພ້ອມນີ້`,
+ delivered:'ສົ່ງຮອດແລ້ວ ✅ ຂອບໃຈທີ່ອຸດໜູນ ຫວັງວ່າຈະໄດ້ຮັບໃຊ້ອີກ ❤️',cancelled:'ຂໍອະໄພ ອໍເດີນີ້ຖືກຍົກເລີກແລ້ວ'};return h+t[o.status]};
+const img2data=f=>new Promise(res=>{const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,1000/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.7))};i.src=r.result};r.readAsDataURL(f)});
+function rowHtml(){return '<div class="x-row"><input class="i-n" list="x-pl" placeholder="ຊື່ສິນຄ້າ"><input class="i-q" type="number" min="1" value="1"><input class="i-p" type="number" min="0" placeholder="ລາຄາ/ຊິ້ນ"><button type="button" data-a="rm">✕</button></div>'}
+function formHtml(){return `<form class="x-form" id="x-form"><b>➕ ບັນທຶກອໍເດີໃໝ່ຈາກຊ່ອງທາງອື່ນ</b><datalist id="x-pl">${plist.map(p=>`<option value="${esc(p.name)}" label="${p.price_lak}">`).join('')}</datalist>
+<div class="x-g"><div><label>ມາຈາກ</label><select name="src">${Object.entries(SRC).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div><label>ຊື່ລູກຄ້າ *</label><input name="name" required></div>
+<div><label>ເບີໂທ / WhatsApp *</label><input name="phone" required placeholder="020 xxxx xxxx"></div><div><label>ຄ່າຂົນສົ່ງ (ກີບ)</label><input name="fee" type="number" min="0" value="0"></div></div>
+<label>ທີ່ຢູ່ຈັດສົ່ງ *</label><textarea name="addr" rows="2" required placeholder="ບ້ານ, ເມືອງ, ແຂວງ"></textarea>
+<label>ລາຍການສິນຄ້າ</label><div id="x-items">${rowHtml()}</div><button type="button" data-a="addrow">＋ ເພີ່ມລາຍການ</button>
+<div class="x-g"><div><label>ການຊຳລະ</label><select name="pay"><option value="cod">ເກັບເງິນປາຍທາງ (COD)</option><option value="paid">ຊຳລະແລ້ວ</option></select></div><div><label>ໝາຍເຫດ</label><input name="note"></div></div>
+<div class="x-act"><button class="primary" type="submit">ບັນທຶກອໍເດີ</button><button type="button" data-a="cancelform">ຍົກເລີກ</button></div></form>`}
+function card(o){
+ const idx=STP.findIndex(s=>s[0]===o.status),can=o.status==='cancelled';
+ const steps=can?'<span class="trb bad">ອໍເດີຖືກຍົກເລີກ</span>':'<div class="x-steps">'+STP.map((s,i)=>`<div class="${i<idx||o.status==='delivered'?'on':i===idx?'cur':''}">${s[1]}</div>`).join('')+'</div>';
+ let act='';const adv=(to,l,cls='primary')=>`<button type="button" class="${cls}" data-a="adv" data-to="${to}">${l}</button>`;
+ if(o.status==='new')act=adv('confirmed','✅ ຢືນຢັນອໍເດີ');
+ else if(o.status==='confirmed')act=adv('packing','📦 ເລີ່ມແພັກສິນຄ້າ');
+ else if(o.status==='packing')act=`<input class="x-car" placeholder="ຂົນສົ່ງ (Anousith, Hal, Mixay…)" value="${esc(o.carrier||'')}"><input class="x-trk" placeholder="ເລກພັດສະດຸ / ເລກບິນ" value="${esc(o.tracking||'')}"><label class="small">📷 ຮູບບິນຂົນສົ່ງ <input class="x-bill-f" type="file" accept="image/*" style="min-width:0"></label>`+adv('shipped','🚚 ສົ່ງສິນຄ້າແລ້ວ');
+ else if(o.status==='shipped')act=`<span class="small">🚚 ${esc(o.carrier||'')} ${esc(o.tracking||'')}</span>`+(o.bill?`<img class="x-bill" src="${o.bill}" alt="bill">`:'')+'<button type="button" class="wa" data-a="bill">📤 ສົ່ງບິນຂົນສົ່ງໃຫ້ລູກຄ້າ</button>'+adv('delivered','✔ ສົ່ງຮອດລູກຄ້າແລ້ວ');
+ else if(o.status==='delivered')act='<span class="trb ok">✅ ຈັດສົ່ງສຳເລັດ</span>'+(o.bill?`<img class="x-bill" src="${o.bill}" alt="bill">`:'');
+ const tools=`<button type="button" class="wa" data-a="wa">💬 ແຈ້ງລູກຄ້າ</button><button type="button" data-a="sms">✉️ SMS</button><button type="button" data-a="cp">📋 ຄັດລອກຂໍ້ຄວາມ</button>`+(!can&&o.status!=='delivered'?'<button type="button" data-a="cancel">ຍົກເລີກອໍເດີ</button>':'')+'<button type="button" data-a="del">🗑</button>';
+ return `<div class="trc" data-oid="${esc(o.id)}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${esc(o.no)}</b> <span class="x-src">${SRC[o.source]||o.source}</span><div class="small">${new Date(o.created_at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'})}</div></div><div style="text-align:right"><b>${fmt(tot(o))}</b><br><span class="trb ${o.status==='delivered'?'ok':can?'bad':'warn'}">${SL[o.status]}</span></div></div>
+ <div style="margin:6px 0">${o.items.map(i=>`${esc(i.n)} × ${i.q} — ${fmt(i.q*i.p)}`).join('<br>')}${o.ship_fee?`<br>🚚 ຄ່າຂົນສົ່ງ ${fmt(o.ship_fee)}`:''}</div>
+ <div class="small">👤 ${esc(o.name)} · 📞 <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a><br>📍 ${esc(o.addr)}<br>💳 ${o.cod?'ເກັບເງິນປາຍທາງ':'ຊຳລະແລ້ວ'}${o.note?'<br>📝 '+esc(o.note):''}</div>${steps}
+ <div class="x-act">${act}</div><div class="x-act">${tools}</div>
+ <details style="margin-top:8px"><summary class="small">ປະຫວັດສະຖານະ</summary>${o.events.map(e=>`<div class="small">• ${SL[e.s]||e.s} — ${new Date(e.t).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'})}</div>`).join('')}</details></div>`}
+async function xrender(){
+ if(!plist.length){try{const r=await sb.from('products').select('name,price_lak').eq('shop_id',sid());plist=r.data||[]}catch(e){}}
+ await xload();
+ const todo=['new','confirmed','packing'],list=ext.filter(o=>flt==='all'||(flt==='todo'&&todo.includes(o.status))||o.status===flt);
+ const F=[['todo','ຕ້ອງຈັດການ'],['shipped','ກຳລັງສົ່ງ'],['delivered','ສຳເລັດ'],['cancelled','ຍົກເລີກ'],['all','ທັງໝົດ']];
+ ext$.innerHTML=(useDb?'':'<div class="x-warn">⚠️ ຂໍ້ມູນຖືກບັນທຶກໃນເຄື່ອງນີ້ເທົ່ານັ້ນ. ຖ້າຢາກໃຫ້ຊິງຄ໌ທຸກອຸປະກອນ ໃຫ້ຣັນໄຟລ໌ external_orders.sql ໃນ Supabase.</div>')
+ +'<div class="x-top"><button type="button" class="primary" data-a="newform">➕ ເພີ່ມອໍເດີໃໝ່</button>'+F.map(f=>`<button type="button" data-f="${f[0]}" class="${flt===f[0]?'on':''}">${f[1]}</button>`).join('')+'</div>'
+ +(showForm?formHtml():'')+(list.length?list.map(card).join(''):'<p class="muted">ຍັງບໍ່ມີອໍເດີໃນໝວດນີ້</p>');
+ badges();
+}
+const find=e=>{const c=e.target.closest('[data-oid]');return c&&ext.find(o=>String(o.id)===c.dataset.oid)};
+async function setSt(o,s,x){o.status=s;o.events.push({s,t:new Date().toISOString()});Object.assign(o,x||{});await xsave(o);await xrender();tst('ອັບເດດແລ້ວ — ກົດ "💬 ແຈ້ງລູກຄ້າ" ເພື່ອສົ່ງສະຖານະ')}
+ext$.addEventListener('click',async e=>{
+ const f=e.target.closest('[data-f]');if(f){flt=f.dataset.f;xrender();return}
+ const a=e.target.closest('[data-a]');if(!a)return;const k=a.dataset.a;
+ if(k==='newform'){showForm=true;await xrender();$('x-form').scrollIntoView({behavior:'smooth'});return}
+ if(k==='cancelform'){showForm=false;xrender();return}
+ if(k==='addrow'){$('x-items').insertAdjacentHTML('beforeend',rowHtml());return}
+ if(k==='rm'){const r=a.closest('.x-row');if(document.querySelectorAll('#x-items .x-row').length>1)r.remove();return}
+ const o=find(e);if(!o)return;const c=a.closest('[data-oid]');
+ if(k==='adv'){const to=a.dataset.to;
+  if(to==='shipped'){const car=c.querySelector('.x-car').value.trim(),trk=c.querySelector('.x-trk').value.trim(),fl=c.querySelector('.x-bill-f').files[0];
+   if(!car||(!trk&&!fl&&!o.bill)){tst('ກະລຸນາໃສ່ຂົນສົ່ງ ແລະ ເລກພັດສະດຸ ຫຼື ຮູບບິນ');return}
+   a.disabled=true;await setSt(o,to,{carrier:car,tracking:trk,bill:fl?await img2data(fl):o.bill||''});return}
+  if(to==='delivered'&&!confirm('ຢືນຢັນວ່າສົ່ງຮອດລູກຄ້າແລ້ວ?'))return;await setSt(o,to)}
+ else if(k==='cancel'){if(confirm('ຍົກເລີກອໍເດີນີ້?'))await setSt(o,'cancelled')}
+ else if(k==='del'){if(confirm('ລຶບອໍເດີນີ້ຖາວອນ?')){await xdel(o);xrender()}}
+ else if(k==='wa')window.open(waUrl(o.phone,msgFor(o)),'_blank');
+ else if(k==='sms')location.href='sms:'+o.phone.replace(/[^\d+]/g,'')+'?body='+encodeURIComponent(msgFor(o));
+ else if(k==='cp'){navigator.clipboard&&navigator.clipboard.writeText(msgFor(o));tst('ຄັດລອກຂໍ້ຄວາມແລ້ວ')}
+ else if(k==='bill'){const text=msgFor(o);
+  if(o.bill&&navigator.canShare){const bl=await (await fetch(o.bill)).blob(),fi=new File([bl],'bill-'+o.no+'.jpg',{type:'image/jpeg'});
+   if(navigator.canShare({files:[fi]})){try{await navigator.share({files:[fi],text})}catch(_){}return}}
+  if(o.bill){const d=document.createElement('a');d.href=o.bill;d.download='bill-'+o.no+'.jpg';d.click();tst('ດາວໂຫຼດຮູບບິນແລ້ວ — ແນບໃນ WhatsApp ພ້ອມຂໍ້ຄວາມ')}
+  window.open(waUrl(o.phone,text),'_blank')}
+});
+ext$.addEventListener('submit',async e=>{
+ e.preventDefault();const f=e.target.elements,items=[...document.querySelectorAll('#x-items .x-row')].map(r=>({n:r.querySelector('.i-n').value.trim(),q:Number(r.querySelector('.i-q').value)||1,p:Number(r.querySelector('.i-p').value)||0})).filter(i=>i.n);
+ if(!items.length){tst('ກະລຸນາເພີ່ມສິນຄ້າຢ່າງໜ້ອຍ 1 ລາຍການ');return}
+ const d=new Date(),no='EX-'+d.toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
+ await xsave({no,source:f.src.value,name:f.name.value.trim(),phone:f.phone.value.trim(),addr:f.addr.value.trim(),items,ship_fee:Number(f.fee.value)||0,cod:f.pay.value==='cod',note:f.note.value.trim(),status:'new',carrier:'',tracking:'',bill:'',events:[{s:'new',t:d.toISOString()}]});
+ showForm=false;flt='todo';await xrender();tst('ບັນທຶກອໍເດີ '+no+' ແລ້ວ');
+});
+})();
+</script>
+
+<style id="lm-hub-css">
+#lmHub{display:none;position:fixed;inset:0;z-index:19;background:#eef5f1;font-family:'Noto Sans Lao',system-ui,sans-serif}#lmHub.open{display:flex}
+#lhSide{width:260px;flex:none;background:linear-gradient(180deg,#053b2e,#022c22);color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:5px;overflow:auto}
+#lhSide .lm-brand{margin-bottom:10px}
+#lhSide button{background:transparent;border:1px solid transparent;color:#e3f5ec;text-align:left;padding:11px 12px;border-radius:12px;font-weight:700}
+#lhSide button small{display:block;font-weight:400;color:#8fc7b0;font-size:11px}#lhSide button:hover{background:#ffffff14}
+#lhSide button.on{background:linear-gradient(135deg,#10b981,#0a7a5a);border-color:#34d3a0}
+#lhSide .sp{flex:1}
+#lhMain{flex:1;min-width:0;overflow:auto;padding:24px 30px 50px}
+.lh-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.lh-h h2{margin:0}
+.lh-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.lh-c{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(5,59,46,.05)}
+.lh-c .k{font-size:12px;color:#6b7770}.lh-c .v{font-size:22px;font-weight:800;color:var(--g);margin-top:4px}.lh-c .v.gold{color:#d97706}.lh-c .v.red{color:#c0322c}
+.lh-flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0}.lh-flow div{background:linear-gradient(135deg,#fff,#e8f6ef);border:1px solid #bfe3d2;border-radius:14px;padding:14px;font-size:14px}.lh-flow b{display:block;color:#066b4f;font-size:20px}
+.lh-t{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:14px}.lh-t th{background:#e6f4ee;text-align:left}.lh-t th,.lh-t td{padding:9px 11px;border-top:1px solid var(--line)}
+.lh-f label{display:block;font-size:13px;font-weight:700;margin:8px 0 3px}.lh-f input,.lh-f select{padding:10px;border:1px solid #c5d8ce;border-radius:9px;width:100%}
+.lh-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.lh-row input{flex:1;min-width:200px}
+.lh-warn{background:#fff5dc;color:#7a5200;border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px}
+@media(max-width:800px){#lmHub{flex-direction:column}#lhSide{width:auto;flex-direction:row;overflow-x:auto;padding:10px}#lhSide .lm-brand,#lhSide .sp,#lhSide small{display:none}#lhSide button{white-space:nowrap}#lhMain{padding:14px}}
+</style>
+<script>
+(function(){
+const sb=window.laoMarketSupabase,$=id=>document.getElementById(id);if(!sb)return;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('en-US')+' ₭',dt=x=>x?new Date(x).toLocaleDateString('en-GB'):'—';
+const tst=m=>{try{toast(m)}catch(e){alert(m)}};
+const hub=document.createElement('div');hub.id='lmHub';
+const NAV=[['home','🏠 ໜ້າໂຮມ','ພາບລວມ ແລະ ທາງລັດ'],['aff','📊 Dashboard ຄ່າຄອມ','ຜູ້ແນະນຳສິນຄ້າ (Affiliate)'],['links','🔗 ລິ້ງສິນຄ້າ Affiliate','ຄັດລອກລິ້ງແຕ່ລະສິນຄ້າ'],['calc','🧮 ຄິດໄລ່ລາຍໄດ້','ຄ່າຄອມ, ຄ່າທຳນຽມ, ຍອດສຸດທິ'],['fin','💰 ການເງິນຮ້ານ & ຖອນເງິນ','ສຳລັບເຈົ້າຂອງຮ້ານ']];
+hub.innerHTML='<aside id="lhSide"><div class="lm-brand">Lao<span>Market</span><small>ໂຮມ & ການເງິນ</small></div>'+NAV.map(n=>`<button type="button" data-s="${n[0]}">${n[1]}<small>${n[2]}</small></button>`).join('')+'<div class="sp"></div><button type="button" id="lhShop">🛍️ ໄປໜ້າຮ້ານຄ້າ</button></aside><main id="lhMain"></main>';
+document.body.appendChild(hub);
+const main=$('lhMain');let cur='home',S={};
+window.openHub=async function(s){hub.classList.add('open');closeM('mystore');await go(s||'home')};
+$('lhShop').onclick=()=>hub.classList.remove('open');
+hub.addEventListener('click',e=>{const b=e.target.closest('#lhSide [data-s]');if(b)go(b.dataset.s);const g=e.target.closest('[data-go]');if(g)go(g.dataset.go)});
+const hb=document.createElement('button');hb.type='button';hb.textContent='🏠 ໂຮມ';hb.id='lmHomeBtn';hb.style.cssText='background:#e8f5ee;color:#066b4f;border:0;font-weight:700;border-radius:10px;padding:9px 14px';hb.onclick=()=>openHub('home');
+const lb=$('loginBtn');if(lb)lb.before(hb);
+const ws=document.querySelector('#lmSide .lm-foot');if(ws){const b=document.createElement('button');b.type='button';b.textContent='🏠 ໂຮມ / ການເງິນ';b.onclick=()=>openHub('fin');ws.prepend(b)}
+async function user(){const r=await sb.auth.getUser();return r.data&&r.data.user}
+const need=()=>{main.innerHTML='<div class="lh-c">ກະລຸນາເຂົ້າລະບົບກ່ອນ <button class="primary" onclick="openM(\'login\')">ເຂົ້າລະບົບ</button></div>'};
+async function rates(){if(S.r)return S.r;let r={fee:3,comm:5,sch:'weekly',wd:1,min:100000};try{const d=await sb.from('platform_settings').select('key,value').in('key',['platform_fee_percent','affiliate_commission_percent','payout_schedule','payout_weekday','payout_min_lak']);(d.data||[]).forEach(x=>{const v=Number(x.value);if(x.key==='payout_schedule')r.sch=String(x.value);else if(x.key==='payout_weekday')r.wd=v;else if(x.key==='payout_min_lak')r.min=v;else if(v>=0&&v<=100){if(x.key==='platform_fee_percent')r.fee=v;else r.comm=v}})}catch(e){}return S.r=r}
+async function go(s){cur=s;hub.querySelectorAll('#lhSide [data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s===s));main.innerHTML='<p>ກຳລັງໂຫຼດ...</p>';
+ try{await ({home,aff,links,calc,fin}[s])()}catch(e){main.innerHTML='<div class="lh-warn">ໂຫຼດບໍ່ໄດ້: '+esc(e.message||e)+'</div>'}}
+const head=t=>`<div class="lh-h"><h2>${t}</h2></div>`;
+async function home(){const r=await rates();
+ main.innerHTML=head('🏠 ຍິນດີຕ້ອນຮັບສູ່ LaoMarket')+`<div class="lh-g"><div class="lh-c"><div class="k">ຄ່າທຳນຽມແພລດຟອມ</div><div class="v">${r.fee}%</div></div><div class="lh-c"><div class="k">ຄ່າຄອມ Affiliate</div><div class="v gold">${r.comm}%</div></div></div>
+ <h3>💸 ການໄຫຼຂອງເງິນ</h3><div class="lh-flow"><div><b>1</b>ລູກຄ້າໂອນເງິນເຂົ້າບັນຊີຂອງລະບົບກ່ອນ</div><div><b>2</b>ແອັດມິນກວດບິນ ແລະ ຢືນຢັນການຊຳລະ</div><div><b>3</b>ລະບົບຫັກຄ່າທຳນຽມ ແລະ ຄ່າຄອມ (%)</div><div><b>4</b>ຍອດສຸດທິສະສົມໃນໜ້າການເງິນຂອງຮ້ານ</div><div><b>5</b>ໂອນອອກເຂົ້າທະນາຄານຮ້ານ ຕາມຮອບທີ່ກຳນົດ</div></div>
+ <div class="lh-g">${NAV.slice(1).map(n=>`<div class="lh-c"><b>${n[1]}</b><div class="k" style="margin:4px 0 10px">${n[2]}</div><button class="primary" data-go="${n[0]}">ເປີດ</button></div>`).join('')}</div>`}
+async function affLoad(){const u=await user();if(!u)return null;const p=await sb.from('affiliate_profiles').select('id,referral_code,status').eq('user_id',u.id).maybeSingle();if(!p.data)return{none:1};
+ const c=await sb.from('affiliate_commissions').select('*').eq('affiliate_id',p.data.id).order('created_at',{ascending:false}).limit(300);return{p:p.data,rows:(c.data||[]).map(r=>({...r,commission_lak:r.commission_lak??r.amount_lak})),err:c.error}}
+const baseUrl=()=>{const u=new URL(location.href);u.hash='';u.search='';return u};
+const ASTAT={pending:'ລໍຖ້າກວດສອບ',pending_approval:'ລໍຖ້າອະນຸມັດ',review:'ກຳລັງກວດ',approved:'ອະນຸມັດແລ້ວ',paid:'ຈ່າຍແລ້ວ',rejected:'ປະຕິເສດ',cancelled:'ຍົກເລີກ',completed:'ສຳເລັດ'};
+async function aff(){const a=await affLoad();if(!a){need();return}
+ if(a.none){main.innerHTML=head('📊 Dashboard ຄ່າຄອມ')+'<div class="lh-c">ທ່ານຍັງບໍ່ໄດ້ສະໝັກ Affiliate <button class="primary" onclick="openM(\'affiliate\')">ສະໝັກຕອນນີ້</button></div>';return}
+ const R=a.rows,L=s=>String(s||'').toLowerCase(),ok=R.filter(r=>!['rejected','cancelled','void'].includes(L(r.status))),sum=(l,k)=>l.reduce((x,r)=>x+Number(r[k]||0),0);
+ const paid=R.filter(r=>L(r.status)==='paid'),pend=R.filter(r=>['pending','pending_approval','review'].includes(L(r.status))),ready=R.filter(r=>['approved','completed'].includes(L(r.status)));
+ const u=baseUrl();u.searchParams.set('ref',a.p.referral_code||'');
+ main.innerHTML=head('📊 Dashboard ຄ່າຄອມມິດຊັນ')+(a.err?'<div class="lh-warn">ອ່ານຕາຕະລາງຄ່າຄອມບໍ່ໄດ້: '+esc(a.err.message)+'</div>':'')+`<div class="lh-g"><div class="lh-c"><div class="k">ຍອດຂາຍທີ່ແນະນຳ</div><div class="v">${fmt(sum(ok,'order_total_lak'))}</div></div><div class="lh-c"><div class="k">ຄ່າຄອມລວມ</div><div class="v gold">${fmt(sum(ok,'commission_lak'))}</div></div><div class="lh-c"><div class="k">ລໍຖ້າອະນຸມັດ</div><div class="v">${fmt(sum(pend,'commission_lak'))}</div></div><div class="lh-c"><div class="k">ພ້ອມຈ່າຍ</div><div class="v">${fmt(sum(ready,'commission_lak'))}</div></div><div class="lh-c"><div class="k">ຈ່າຍແລ້ວ</div><div class="v">${fmt(sum(paid,'commission_lak'))}</div></div></div>
+ <div class="lh-c" style="margin-bottom:16px"><b>ລິ້ງແນະນຳຫຼັກຂອງທ່ານ</b> <span class="k">(ລະຫັດ ${esc(a.p.referral_code)} · ${esc(a.p.status)})</span><div class="lh-row" style="margin-top:8px"><input readonly value="${esc(u)}"><button class="primary" data-copy="${esc(u)}">ຄັດລອກ</button></div></div>
+ <table class="lh-t"><tr><th>ວັນທີ</th><th>ອໍເດີ</th><th>ຍອດຂາຍ</th><th>ຄ່າຄອມ</th><th>ສະຖານະ</th></tr>${R.map(r=>`<tr><td>${dt(r.created_at)}</td><td>${esc(r.order_id||'—')}</td><td>${fmt(r.order_total_lak)}</td><td>${fmt(r.commission_lak)}</td><td>${ASTAT[L(r.status)]||esc(r.status)}</td></tr>`).join('')||'<tr><td colspan="5">ຍັງບໍ່ມີລາຍການ</td></tr>'}</table>`}
+document.addEventListener('click',e=>{const c=e.target.closest('[data-copy]');if(c){navigator.clipboard?navigator.clipboard.writeText(c.dataset.copy).then(()=>tst('ຄັດລອກລິ້ງແລ້ວ ✅')):tst('ຄັດລອກບໍ່ໄດ້')}});
+async function links(){const a=await affLoad();if(!a){need();return}
+ if(a.none){main.innerHTML=head('🔗 ລິ້ງສິນຄ້າ')+'<div class="lh-c">ສະໝັກ Affiliate ກ່ອນຈຶ່ງຈະມີລິ້ງ <button class="primary" onclick="openM(\'affiliate\')">ສະໝັກ</button></div>';return}
+ const r=await rates(),P=typeof products!=='undefined'?products:[];
+ main.innerHTML=head('🔗 ລິ້ງສິນຄ້າສຳລັບແນະນຳ')+`<p class="k">ຄັດລອກລິ້ງໄປວາງໃນເວັບ/ໂຊຊຽນ. ລູກຄ້າທີ່ສັ່ງຊື້ຜ່ານລິ້ງຈະເຮັດໃຫ້ທ່ານໄດ້ຄ່າຄອມປະມານ ${r.comm}%</p><table class="lh-t"><tr><th>ສິນຄ້າ</th><th>ລາຄາ</th><th>ຄ່າຄອມ/ຊິ້ນ</th><th></th></tr>${P.map(p=>{const price=Number(p.price??p.price_lak??0),u=baseUrl();u.searchParams.set('ref',a.p.referral_code||'');u.searchParams.set('p',p.id);
+ return `<tr><td>${esc(p.name)}</td><td>${fmt(price)}</td><td>${fmt(Math.round(price*r.comm/100))}</td><td><button class="primary" data-copy="${esc(u)}">🔗 ຄັດລອກລິ້ງ</button></td></tr>`}).join('')||'<tr><td colspan="4">ຍັງບໍ່ມີສິນຄ້າ</td></tr>'}</table>`}
+async function calc(){const r=await rates();
+ main.innerHTML=head('🧮 ຄິດໄລ່ລາຍໄດ້')+`<div class="lh-g"><div class="lh-c lh-f"><b>ຂໍ້ມູນ</b><label>ລາຄາຂາຍ/ຊິ້ນ (ກີບ)</label><input id="c1" type="number" value="100000"><label>ຈຳນວນຂາຍຕໍ່ເດືອນ</label><input id="c2" type="number" value="20"><label>ຄ່າຄອມ Affiliate (%)</label><input id="c3" type="number" value="${r.comm}"><label>ຄ່າທຳນຽມແພລດຟອມ (%)</label><input id="c4" type="number" value="${r.fee}"></div><div class="lh-c" id="cout"></div></div>`;
+ const f=()=>{const p=+$('c1').value||0,q=+$('c2').value||0,c=+$('c3').value||0,m=+$('c4').value||0,cm=Math.round(p*c/100),fe=Math.round(p*m/100);
+  $('cout').innerHTML=`<div class="k">🔗 ຜູ້ແນະນຳ (Affiliate)</div><div class="v gold">${fmt(cm)} / ຊິ້ນ</div><div class="k">ຕໍ່ເດືອນ</div><div class="v gold">${fmt(cm*q)}</div><hr><div class="k">🏪 ເຈົ້າຂອງຮ້ານ (ຫຼັງຫັກ ${m}% + ${c}%)</div><div class="v">${fmt(p-cm-fe)} / ຊິ້ນ</div><div class="k">ຕໍ່ເດືອນ</div><div class="v">${fmt((p-cm-fe)*q)}</div><hr><div class="k">🏦 ແພລດຟອມໄດ້ຮັບ</div><div class="v">${fmt(fe*q)} / ເດືອນ</div>`};
+ hub.querySelectorAll('#lhMain input').forEach(i=>i.oninput=f);f()}
+const nextPay=(sch,wd,last)=>{const d=new Date();if(sch==='monthly'){return new Date(d.getFullYear(),d.getMonth()+1,1)}d.setHours(0,0,0,0);d.setDate(d.getDate()+((wd-d.getDay()+7)%7||7));if(sch==='biweekly'&&last){const m=new Date(new Date(last).getTime()+14*864e5);if(m>new Date())return m}return d};
+async function fin(){const u=await user();if(!u){need();return}
+ const sh=await sb.from('shops').select('id,name,status').eq('owner_id',u.id).eq('status','approved').limit(1);const shop=sh.data&&sh.data[0];
+ if(!shop){main.innerHTML=head('💰 ການເງິນຮ້ານ')+'<div class="lh-c">ໜ້ານີ້ສຳລັບເຈົ້າຂອງຮ້ານທີ່ໄດ້ຮັບອະນຸມັດ</div>';return}
+ const r=await rates();
+ const [o,st,po,cm]=await Promise.all([sb.rpc('seller_orders',{p_shop:shop.id}),sb.from('shop_payout_settings').select('*').eq('shop_id',shop.id).maybeSingle(),sb.from('payout_requests').select('*').eq('shop_id',shop.id).order('created_at',{ascending:false}).limit(100),sb.from('affiliate_commissions').select('*')]);
+ const miss=po.error,S0={bank:(st.data||{}).bank||'',schedule:r.sch,weekday:r.wd,min_amount:r.min},orders=(o.data||[]).filter(x=>x.payment_method!=='cash_on_delivery'&&x.payment_status==='confirmed'&&x.fulfillment!=='cancelled');
+ const cmap={};(cm.data||[]).forEach(c=>{if(!['rejected','cancelled','void'].includes(String(c.status).toLowerCase()))cmap[String(c.order_id)]=(cmap[String(c.order_id)]||0)+Number(c.commission_lak??c.amount_lak??0)});
+ const rows=orders.map(x=>{const g=Number(x.shop_total),fe=Math.round(g*r.fee/100),c=Math.min(g-fe,cmap[String(x.order_number)]||cmap[String(x.id)]||0);return{...x,g,fe,c,n:g-fe-c,done:x.fulfillment==='delivered'}});
+ const sum=(l,k)=>l.reduce((a,x)=>a+x[k],0),dn=rows.filter(x=>x.done),net=sum(dn,'n'),esc2=sum(rows.filter(x=>!x.done),'n');
+ const P=po.data||[],took=P.filter(p=>p.status!=='rejected').reduce((a,p)=>a+Number(p.amount_lak),0),avail=Math.max(0,net-took),nx=nextPay(S0.schedule,S0.weekday,(P.find(p=>p.status==='paid')||{}).reviewed_at);
+ const days=['ອາທິດ','ຈັນ','ອັງຄານ','ພຸດ','ພະຫັດ','ສຸກ','ເສົາ'];
+ main.innerHTML=head('💰 ການເງິນຮ້ານ — '+esc(shop.name))+(miss?'<div class="lh-warn">ຍັງບໍ່ໄດ້ສ້າງຕາຕະລາງຖອນເງິນ: ກະລຸນາຣັນໄຟລ໌ payouts.sql ໃນ Supabase ('+esc((miss||{}).message)+')</div>':'')
+ +`<div class="lh-g"><div class="lh-c"><div class="k">ຍອດຂາຍ (ໂອນເຂົ້າລະບົບ)</div><div class="v">${fmt(sum(rows,'g'))}</div></div><div class="lh-c"><div class="k">ຫັກຄ່າທຳນຽມ ${r.fee}%</div><div class="v red">- ${fmt(sum(rows,'fe'))}</div></div><div class="lh-c"><div class="k">ຫັກຄ່າຄອມ Affiliate</div><div class="v red">- ${fmt(sum(rows,'c'))}</div></div><div class="lh-c"><div class="k">ຍອດສຸດທິ (ສົ່ງຮອດແລ້ວ)</div><div class="v">${fmt(net)}</div></div><div class="lh-c"><div class="k">ຖືກຖອນ/ລໍຖ້າໂອນແລ້ວ</div><div class="v">${fmt(took)}</div></div><div class="lh-c"><div class="k">ຖອນໄດ້ຕອນນີ້</div><div class="v gold">${fmt(avail)}</div></div><div class="lh-c"><div class="k">ລໍຖ້າສົ່ງຮອດ (ກັກໄວ້)</div><div class="v">${fmt(esc2)}</div></div></div>
+ <div class="lh-g"><div class="lh-c lh-f"><b>🏦 ບັນຊີຮັບເງິນຂອງຮ້ານ</b><p class="k">ຮອບໂອນ ແລະ ຍອດຂັ້ນຕ່ຳ ກຳນົດໂດຍແອັດມິນ: ${{weekly:'ທຸກອາທິດ',biweekly:'ທຸກ 2 ອາທິດ',monthly:'ທຸກເດືອນ'}[S0.schedule]||S0.schedule} (ວັນ${days[S0.weekday]}) · ຂັ້ນຕ່ຳ ${fmt(S0.min_amount)}</p><label>ບັນຊີທະນາຄານຮ້ານ</label><input id="f3" value="${esc(S0.bank)}" placeholder="ທະນາຄານ / ເລກບັນຊີ / ຊື່ບັນຊີ"><div style="margin-top:10px"><button class="primary" id="fsave">ບັນທຶກ</button></div></div>
+ <div class="lh-c"><b>📅 ຮອບໂອນຕໍ່ໄປ</b><div class="v">${nx.toLocaleDateString('en-GB')}</div><p class="k">ຍອດພ້ອມໂອນ ${fmt(avail)} · ຂັ້ນຕ່ຳ ${fmt(S0.min_amount)}</p><button class="primary" id="freq" ${avail>=S0.min_amount&&S0.bank&&!miss?'':'disabled'}>💸 ຂໍຖອນເງິນດຽວນີ້</button><p class="k">ຕ້ອງຕັ້ງບັນຊີ ແລະ ຍອດເຖິງຂັ້ນຕ່ຳ. ແອັດມິນຈະກວດ ແລະ ໂອນ ແລ້ວປ່ຽນສະຖານະເປັນ "ໂອນແລ້ວ".</p></div></div>
+ <h3>ປະຫວັດການໂອນອອກ</h3><table class="lh-t"><tr><th>ວັນທີ</th><th>ຈຳນວນ</th><th>ສະຖານະ</th></tr>${P.map(p=>`<tr><td>${dt(p.created_at)}</td><td>${fmt(p.amount_lak)}</td><td>${{pending:'ລໍຖ້າແອັດມິນ',approved:'ອະນຸມັດ — ລໍຖ້າໂອນ',paid:'ໂອນແລ້ວ '+dt(p.reviewed_at),rejected:'ປະຕິເສດ'}[p.status]||esc(p.status)}</td></tr>`).join('')||'<tr><td colspan="3">ຍັງບໍ່ມີ</td></tr>'}</table>
+ <h3>ລາຍການຫັກເງິນແຕ່ລະອໍເດີ</h3><table class="lh-t"><tr><th>ອໍເດີ</th><th>ຍອດ</th><th>ຄ່າທຳນຽມ</th><th>ຄ່າຄອມ</th><th>ສຸດທິ</th><th></th></tr>${rows.map(x=>`<tr><td>${esc(x.order_number)}</td><td>${fmt(x.g)}</td><td>${fmt(x.fe)}</td><td>${fmt(x.c)}</td><td>${fmt(x.n)}</td><td>${x.done?'✅':'⏳'}</td></tr>`).join('')||'<tr><td colspan="6">ຍັງບໍ່ມີອໍເດີທີ່ຊຳລະຜ່ານລະບົບ</td></tr>'}</table>`;
+  $('fsave').onclick=async()=>{const x=await sb.from('shop_payout_settings').upsert({shop_id:shop.id,bank:$('f3').value.trim()});x.error?tst('ບັນທຶກບໍ່ໄດ້: '+x.error.message):(tst('ບັນທຶກແລ້ວ ✅'),fin())};
+ $('freq').onclick=async()=>{if(!confirm('ຂໍຖອນ '+fmt(avail)+' ?'))return;const x=await sb.from('payout_requests').insert({shop_id:shop.id,amount_lak:avail,payout_account_masked:'••••'+S0.bank.slice(-4),status:'pending'});x.error?tst('ບໍ່ສຳເລັດ: '+x.error.message):(tst('ສົ່ງຄຳຂໍແລ້ວ ✅'),fin())}}
+/* open product from affiliate link ?p= */
+try{const pid=new URLSearchParams(location.search).get('p');if(pid){let n=0;const t=setInterval(()=>{if(typeof products!=='undefined'&&products.length&&typeof showDetail==='function'){clearInterval(t);showDetail(pid);openM('detail')}else if(++n>40)clearInterval(t)},300)}}catch(e){}
+})();
+</script>
+
 </body></html>

@@ -1519,7 +1519,7 @@ if(!head||!$('cartBtn'))return;
 const burger=document.createElement('button');burger.type='button';burger.id='lmTopBurger';burger.setAttribute('aria-label','เมนู');burger.innerHTML='<span></span><span></span><span></span>';
 const panel=document.createElement('div');panel.id='lmTopMenu';
 $('cartBtn').after(burger);document.body.appendChild(panel);
-const ids=['loginBtn','lmHomeBtn','trackBtn','lmWorkBtn','userPill','logoutBtn'],mq=matchMedia('(max-width:800px)');
+const ids=['loginBtn','lmHomeBtn','trackBtn','lmWorkBtn','logoutBtn'],mq=matchMedia('(max-width:800px)');
 function place(){ids.forEach(i=>{const e=$(i);if(e)(mq.matches?panel:head).appendChild(e)});if(!mq.matches)close()}
 function close(){panel.classList.remove('open');burger.classList.remove('open')}
 burger.onclick=e=>{e.stopPropagation();const o=!panel.classList.contains('open');if(o)panel.style.top=(head.getBoundingClientRect().bottom+6)+'px';panel.classList.toggle('open',o);burger.classList.toggle('open',o)};
@@ -1530,43 +1530,16 @@ addEventListener('scroll',close,{passive:true});
 (mq.addEventListener?mq.addEventListener('change',place):mq.addListener(place));place();
 })();
 </script>
-<style id="lm-burger-css">
-#lmBurgerTop{display:inline-flex;align-items:center;justify-content:center;width:46px;height:44px;padding:0;font-size:24px;line-height:1;background:linear-gradient(135deg,#0a8a65,#066b4f);color:#fff;border:0;border-radius:12px;position:relative}
-#lmBurgerTop .dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:99px;background:#f59e0b;color:#3b2400;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center}
-#lmMenu{position:fixed;right:12px;top:64px;width:min(310px,92vw);max-height:80vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 44px rgba(5,59,46,.25);padding:10px;display:grid;gap:6px;z-index:91}
-#lmMenu[hidden]{display:none}
-#lmMenu button:not([hidden]){display:flex;align-items:center;gap:8px;width:100%;text-align:left;justify-content:flex-start;padding:13px 14px;border-radius:12px;font-size:15px;font-weight:700;margin:0}
-#lmMenu #logoutBtn:not([hidden]){margin-top:4px}
-#lmMenuBg{position:fixed;inset:0;z-index:90;background:rgba(5,59,46,.25)}#lmMenuBg[hidden]{display:none}
-@media(max-width:700px){.head{gap:10px}.head .logo{margin-right:auto}}
-</style>
-<script>
-(function(){
-const head=document.querySelector('header .head');if(!head)return;
-const $=id=>document.getElementById(id);
-const bt=document.createElement('button');bt.type='button';bt.id='lmBurgerTop';bt.setAttribute('aria-label','เมนู');bt.innerHTML='☰<span class="dot" id="lmDot"></span>';
-const bg=document.createElement('div');bg.id='lmMenuBg';bg.hidden=true;
-const menu=document.createElement('nav');menu.id='lmMenu';menu.hidden=true;
-head.appendChild(bt);document.body.append(bg,menu);
-['lmHomeBtn','trackBtn','lmWorkBtn','userPill','logoutBtn'].forEach(id=>{const b=$(id);if(b)menu.appendChild(b)});
-const close=()=>{menu.hidden=true;bg.hidden=true};
-const open=()=>{menu.style.top=(document.querySelector('header').getBoundingClientRect().bottom+6)+'px';menu.hidden=false;bg.hidden=false};
-bt.onclick=e=>{e.stopPropagation();menu.hidden?open():close()};
-bg.onclick=close;document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
-menu.addEventListener('click',e=>{if(e.target.closest('button'))setTimeout(close,0)});
-/* badge: pending-order count from workspace */
-const sync=()=>{const n=document.querySelector('#ms-t-orders .lm-badge,#ms-t-ext .lm-badge');const d=$('lmDot');if(d){d.textContent=n?n.textContent:'';d.style.display=n?'flex':'none'}};
-setInterval(sync,3000);
-})();
-</script>
+
 <style id="lm-pill-css">
 header .head #userPill:not([hidden]){display:inline-flex;align-items:center;gap:6px;order:99;padding:8px 14px;border-radius:99px;background:linear-gradient(135deg,#e8f6ef,#d3eee0);color:#066b4f;border:1px solid #9fd3bd;font-weight:800;font-size:14px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 2px 8px rgba(5,59,46,.12)}
-header .head #lmBurgerTop{order:98}
-@media(max-width:700px){
+header .head #lmTopBurger{order:98}
+@media(max-width:800px){
  header .head{gap:8px;padding:12px}
- header .head .logo{font-size:21px}
- header .head #cartBtn{padding:8px 10px;font-size:13px}
- header .head #userPill:not([hidden]){padding:8px 10px;font-size:13px;max-width:104px}
+ header .head .logo{font-size:21px;flex:1;min-width:0}
+ header .head #cartBtn{padding:8px 10px;font-size:13px;white-space:nowrap}
+ header .head #lmTopBurger{width:42px;height:40px;flex:none}
+ header .head #userPill:not([hidden]){padding:8px 10px;font-size:13px;max-width:96px;flex:none}
 }
 </style>
 <script>
